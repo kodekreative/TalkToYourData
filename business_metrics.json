@@ -1,0 +1,356 @@
+{
+  "business_metrics": {
+    "cost_per_sale": {
+      "description": "Total revenue divided by number of successful sales",
+      "formula": "sum(REVENUE_COLUMN) / count(SALE_COLUMN where SALE_COLUMN = 'Yes')",
+      "required_columns": ["revenue", "sale"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Cost per sale by publisher = sum(revenue) per publisher / count(sales='Yes') per publisher"
+    },
+    "conversion_rate": {
+      "description": "Percentage of successful sales out of total attempts",
+      "formula": "count(SALE_COLUMN where SALE_COLUMN = 'Yes') / count(SALE_COLUMN) * 100",
+      "required_columns": ["sale"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Conversion rate by publisher = (Yes sales / Total sales) * 100 per publisher"
+    },
+    "average_revenue_per_sale": {
+      "description": "Average revenue generated per successful sale",
+      "formula": "sum(REVENUE_COLUMN where SALE_COLUMN = 'Yes') / count(SALE_COLUMN where SALE_COLUMN = 'Yes')",
+      "required_columns": ["revenue", "sale"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Average revenue per sale = total revenue from Yes sales / number of Yes sales"
+    },
+    "total_revenue": {
+      "description": "Sum of all revenue",
+      "formula": "sum(REVENUE_COLUMN)",
+      "required_columns": ["revenue"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Total revenue by publisher = sum(revenue) grouped by publisher"
+    },
+    "roi": {
+      "description": "Return on Investment - revenue minus cost divided by cost",
+      "formula": "(sum(REVENUE_COLUMN) - sum(COST_COLUMN)) / sum(COST_COLUMN) * 100",
+      "required_columns": ["revenue", "cost"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "ROI by publisher = (total revenue - total cost) / total cost * 100"
+    },
+    "success_rate": {
+      "description": "Same as conversion rate - percentage of successful outcomes",
+      "formula": "count(SALE_COLUMN where SALE_COLUMN = 'Yes') / count(SALE_COLUMN) * 100",
+      "required_columns": ["sale"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Success rate = (successful sales / total attempts) * 100"
+    },
+    "average_cost_per_attempt": {
+      "description": "Average cost spent per sales attempt",
+      "formula": "sum(COST_COLUMN) / count(SALE_COLUMN)",
+      "required_columns": ["cost", "sale"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Average cost per attempt = total cost / number of sales attempts"
+    },
+    "revenue_per_customer": {
+      "description": "Average revenue per unique customer",
+      "formula": "sum(REVENUE_COLUMN) / count(distinct CUSTOMER_COLUMN)",
+      "required_columns": ["revenue", "customer"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Revenue per customer = total revenue / number of unique customers"
+    },
+    "sales_conversion_rate": {
+      "description": "Percentage of calls that result in sales",
+      "formula": "count(SALE_COLUMN where SALE_COLUMN = 'Yes') / count(CALL_ID) * 100",
+      "required_columns": ["sale", "call_id"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Sales conversion rate by publisher = (Yes sales / Total calls) * 100 per publisher"
+    },
+    "quote_to_sale_conversion": {
+      "description": "Percentage of quotes that convert to sales",
+      "formula": "count(SALE_COLUMN where SALE_COLUMN = 'Yes') / count(QUOTE_COLUMN where QUOTE_COLUMN = 'Yes') * 100",
+      "required_columns": ["sale", "quote"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Quote-to-sale conversion = (Sales / Quotes given) * 100"
+    },
+    "agent_reach_rate": {
+      "description": "Percentage of calls that successfully reach an agent",
+      "formula": "count(REACHED_AGENT_COLUMN where REACHED_AGENT_COLUMN = 'Yes') / count(CALL_ID) * 100",
+      "required_columns": ["reached_agent", "call_id"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Agent reach rate = (Calls reaching agent / Total calls) * 100"
+    },
+    "qualification_rate": {
+      "description": "Percentage of calls that meet qualification criteria",
+      "formula": "count(ISQUALIFIED_COLUMN where ISQUALIFIED_COLUMN = 1) / count(CALL_ID) * 100",
+      "required_columns": ["isqualified", "call_id"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Qualification rate = (Qualified calls / Total calls) * 100"
+    },
+    "revenue_per_sale": {
+      "description": "Average revenue generated per successful sale",
+      "formula": "sum(REVENUE_COLUMN where SALE_COLUMN = 'Yes') / count(SALE_COLUMN where SALE_COLUMN = 'Yes')",
+      "required_columns": ["revenue", "sale"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Revenue per sale = Total revenue from sales / Number of sales"
+    },
+    "revenue_per_call": {
+      "description": "Average revenue generated per call",
+      "formula": "sum(REVENUE_COLUMN) / count(CALL_ID)",
+      "required_columns": ["revenue", "call_id"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Revenue per call = Total revenue / Total calls"
+    },
+    "revenue_per_qualified_lead": {
+      "description": "Revenue generated per qualified call",
+      "formula": "sum(REVENUE_COLUMN where ISQUALIFIED_COLUMN = 1) / count(ISQUALIFIED_COLUMN where ISQUALIFIED_COLUMN = 1)",
+      "required_columns": ["revenue", "isqualified"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Revenue per qualified lead = Revenue from qualified calls / Number of qualified calls"
+    },
+    "return_on_ad_spend": {
+      "description": "Revenue generated compared to payout costs (ROAS)",
+      "formula": "sum(REVENUE_COLUMN) / sum(PAYOUT_COLUMN)",
+      "required_columns": ["revenue", "payout"],
+      "result_type": "ratio",
+      "group_by_supported": true,
+      "example": "ROAS = Total revenue / Total payout costs"
+    },
+    "cost_per_sale": {
+      "description": "Average cost to generate one sale",
+      "formula": "sum(PAYOUT_COLUMN) / count(SALE_COLUMN where SALE_COLUMN = 'Yes')",
+      "required_columns": ["payout", "sale"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Cost per sale = Total payout / Number of sales"
+    },
+    "cost_per_lead": {
+      "description": "Average cost per call/lead",
+      "formula": "sum(PAYOUT_COLUMN) / count(CALL_ID)",
+      "required_columns": ["payout", "call_id"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Cost per lead = Total payout / Total calls"
+    },
+    "profit_per_sale": {
+      "description": "Net profit per sale",
+      "formula": "(sum(REVENUE_COLUMN where SALE_COLUMN = 'Yes') - sum(PAYOUT_COLUMN where SALE_COLUMN = 'Yes')) / count(SALE_COLUMN where SALE_COLUMN = 'Yes')",
+      "required_columns": ["revenue", "payout", "sale"],
+      "result_type": "currency",
+      "group_by_supported": true,
+      "example": "Profit per sale = (Revenue from sales - Payout for sales) / Number of sales"
+    },
+    "profit_margin": {
+      "description": "Percentage profit on sales",
+      "formula": "(sum(REVENUE_COLUMN) - sum(PAYOUT_COLUMN)) / sum(REVENUE_COLUMN) * 100",
+      "required_columns": ["revenue", "payout"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Profit margin = ((Total revenue - Total payout) / Total revenue) * 100"
+    },
+    "average_call_duration": {
+      "description": "Mean length of all calls in minutes",
+      "formula": "mean(DURATION_COLUMN)",
+      "required_columns": ["duration"],
+      "result_type": "time",
+      "group_by_supported": true,
+      "example": "Average call duration = Mean of all call durations"
+    },
+    "average_wait_time": {
+      "description": "Mean time callers wait for agents in seconds",
+      "formula": "mean(WAIT_IN_SEC_COLUMN)",
+      "required_columns": ["wait_in_sec"],
+      "result_type": "time",
+      "group_by_supported": true,
+      "example": "Average wait time = Mean wait time across all calls"
+    },
+    "lead_quality_score": {
+      "description": "Average quality rating of leads",
+      "formula": "mean(SCORE_COLUMN)",
+      "required_columns": ["score"],
+      "result_type": "score",
+      "group_by_supported": true,
+      "example": "Lead quality score = Average of all lead scores"
+    },
+    "call_completion_rate": {
+      "description": "Percentage of calls that reach the enrollment stage",
+      "formula": "count(STAGE_5_ENROLLMENT_COLUMN where STAGE_5_ENROLLMENT_COLUMN = 'Yes') / count(CALL_ID) * 100",
+      "required_columns": ["stage_5_enrollment", "call_id"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Call completion rate = (Calls reaching enrollment / Total calls) * 100"
+    },
+    "ivr_abandonment_rate": {
+      "description": "Percentage of calls lost in IVR system",
+      "formula": "count(IVR_COLUMN where IVR_COLUMN = 'Yes' and REACHED_AGENT_COLUMN = 'No') / count(IVR_COLUMN where IVR_COLUMN = 'Yes') * 100",
+      "required_columns": ["ivr", "reached_agent"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "IVR abandonment = (IVR calls not reaching agent / Total IVR calls) * 100"
+    },
+    "callback_success_rate": {
+      "description": "Conversion rate of scheduled callbacks",
+      "formula": "count(CALLBACK_CONVERSION_COLUMN where CALLBACK_CONVERSION_COLUMN = 1) / count(CALL_BACK_COLUMN where CALL_BACK_COLUMN = 'Yes') * 100",
+      "required_columns": ["callback_conversion", "call_back"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Callback success rate = (Successful callback conversions / Total callbacks) * 100"
+    },
+    "ad_satisfaction_rate": {
+      "description": "Percentage of callers not feeling misled by advertising",
+      "formula": "count(AD_MISLED_COLUMN where AD_MISLED_COLUMN = 'No') / count(AD_MISLED_COLUMN) * 100",
+      "required_columns": ["ad_misled"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Ad satisfaction = (Calls not misled / Total calls with ad feedback) * 100"
+    },
+    "billable_rate": {
+      "description": "Percentage of calls that are billable",
+      "formula": "count(BILLABLE_COLUMN where BILLABLE_COLUMN = 'Yes') / count(CALL_ID) * 100",
+      "required_columns": ["billable", "call_id"],
+      "result_type": "percentage",
+      "group_by_supported": true,
+      "example": "Billable rate = (Billable calls / Total calls) * 100"
+    },
+    "monthly_conversion_trend": {
+      "description": "Conversion rate trends by month",
+      "formula": "group by month(DATE_COLUMN): count(SALE_COLUMN where SALE_COLUMN = 'Yes') / count(SALE_COLUMN) * 100",
+      "required_columns": ["sale", "date"],
+      "result_type": "percentage",
+      "group_by_supported": false,
+      "example": "Monthly conversion trend = Conversion rate calculated for each month"
+    },
+    "daily_call_volume": {
+      "description": "Number of calls by day of the week",
+      "formula": "group by day_of_week(DATE_COLUMN): count(CALL_ID)",
+      "required_columns": ["call_id", "date"],
+      "result_type": "count",
+      "group_by_supported": false,
+      "example": "Daily call volume = Count of calls for each day of the week"
+    },
+    "hourly_conversion_pattern": {
+      "description": "Conversion rates by hour of the day",
+      "formula": "group by hour(DATE_COLUMN): count(SALE_COLUMN where SALE_COLUMN = 'Yes') / count(SALE_COLUMN) * 100",
+      "required_columns": ["sale", "date"],
+      "result_type": "percentage",
+      "group_by_supported": false,
+      "example": "Hourly conversion pattern = Conversion rate for each hour of the day"
+    },
+    "weekly_revenue_trend": {
+      "description": "Revenue trends by week",
+      "formula": "group by week(DATE_COLUMN): sum(REVENUE_COLUMN)",
+      "required_columns": ["revenue", "date"],
+      "result_type": "currency",
+      "group_by_supported": false,
+      "example": "Weekly revenue trend = Total revenue for each week"
+    },
+    "peak_call_hours": {
+      "description": "Identify busiest hours for call volume",
+      "formula": "group by hour(DATE_COLUMN): count(CALL_ID) order by count desc",
+      "required_columns": ["call_id", "date"],
+      "result_type": "analysis",
+      "group_by_supported": false,
+      "example": "Peak call hours = Hours ranked by call volume"
+    }
+  },
+  "column_mappings": {
+    "publisher": ["publisher", "affiliate", "media_company", "partner", "source", "vendor", "supplier", "channel"],
+    "target": ["target", "audience", "segment", "demographic"],
+    "buyer": ["buyer", "client", "customer", "end_customer", "purchaser", "user", "account"],
+    "campaign": ["campaign", "initiative", "effort", "program"],
+    "call_id": ["call_id", "call_identifier", "id", "unique_id"],
+    "recording_id": ["recording_id", "record_id", "audio_id"],
+    "caller_id": ["caller_id", "phone_number", "phone", "number"],
+    "call_date": ["call_date", "date", "timestamp", "time", "created", "occurred"],
+    "date": ["date", "call_date", "timestamp", "datetime", "time", "created_at", "occurred_at", "call_time", "recorded_date"],
+    "duration": ["duration", "call_length", "length", "time_spent"],
+    "ivr": ["ivr", "interactive_voice_response", "automated_system"],
+    "ivr2": ["ivr2", "secondary_ivr", "additional_ivr"],
+    "wait_in_sec": ["wait_in_sec", "wait_time", "queue_time", "hold_time"],
+    "reached_agent": ["reached_agent", "agent_connected", "agent_reached"],
+    "talked_to_agent": ["talked_to_agent", "agent_conversation", "spoke_to_agent"],
+    "lead_review": ["lead_review", "review_score", "lead_rating"],
+    "customer_intent": ["customer_intent", "intent_level", "interest_level"],
+    "isqualified": ["isqualified", "qualified", "qualification", "meets_criteria"],
+    "score": ["score", "rating", "quality_score", "lead_score"],
+    "stage_1_introduction": ["stage_1_introduction", "introduction", "greeting", "stage 1 - introduction"],
+    "stage_2_eligibility": ["stage_2_eligibility", "eligibility", "qualification_check", "stage 2 - eligibility"],
+    "stage_3_needs_analysis": ["stage_3_needs_analysis", "needs_analysis", "discovery", "stage 3- needs analysis"],
+    "stage_4_plan_detail": ["stage_4_plan_detail", "plan_detail", "presentation", "stage 4 - plan detail"],
+    "stage_5_enrollment": ["stage_5_enrollment", "enrollment", "closing", "stage 5- enrollment"],
+    "quote": ["quote", "price_quote", "estimate", "pricing"],
+    "quote3": ["quote3", "additional_quote", "follow_up_quote"],
+    "sale": ["sale", "sales", "conversion", "success", "closed"],
+    "sale4": ["sale4", "additional_sale", "upsell"],
+    "revenue": ["revenue", "amount", "income", "sales_amount", "value", "price"],
+    "cost": ["cost", "expense", "spend", "investment", "budget"],
+    "payout": ["payout", "commission", "payment"],
+    "billable": ["billable", "chargeable", "payable"],
+    "disposition": ["disposition", "outcome", "notes", "summary"],
+    "callback_conversion": ["callback_conversion", "callback_success"],
+    "call_back": ["call_back", "callback", "follow_up"],
+    "ad_mention": ["ad_mention", "ad_referenced", "saw_ad"],
+    "ad_misled": ["ad_misled", "felt_deceived", "misleading_ad"],
+    "objection_with_no_rebuttal": ["objection_with_no_rebuttal", "unhandled_objection"],
+    "unprofessionalism": ["unprofessionalism", "poor_service", "inappropriate"],
+    "you_called_me": ["you_called_me", "inbound_claim"],
+    "you_called_me_prompt": ["you_called_me_prompt", "inbound_response"]
+  },
+  "synonyms": {
+    "cost per sale": ["cost_per_sale", "cps", "cost per conversion", "cost per success"],
+    "conversion rate": ["conversion_rate", "success rate", "win rate", "close rate"],
+    "roi": ["return on investment", "return_on_investment", "profitability"],
+    "revenue per customer": ["customer value", "customer_value", "arpu", "average revenue per user"],
+    "sales_conversion_rate": ["sales conversion", "conversion rate", "close rate", "win rate"],
+    "quote_to_sale_conversion": ["quote conversion", "quote to close", "quote success"],
+    "agent_reach_rate": ["agent connection", "reach rate", "connection rate"],
+    "qualification_rate": ["qualify rate", "qual rate", "qualification success"],
+    "revenue_per_sale": ["average sale value", "sale value", "revenue per close"],
+    "revenue_per_call": ["call value", "revenue per lead"],
+    "return_on_ad_spend": ["roas", "ad spend roi", "advertising return"],
+    "cost_per_sale": ["cps", "cost per conversion", "acquisition cost"],
+    "cost_per_lead": ["cpl", "lead cost", "cost per call"],
+    "profit_per_sale": ["sale profit", "profit per close"],
+    "profit_margin": ["margin", "profitability", "profit percentage"],
+    "average_call_duration": ["call length", "talk time", "duration"],
+    "average_wait_time": ["queue time", "hold time", "wait time"],
+    "lead_quality_score": ["quality score", "lead rating"],
+    "call_completion_rate": ["completion rate", "finish rate"],
+    "ivr_abandonment_rate": ["ivr dropout", "abandonment rate"],
+    "callback_success_rate": ["callback conversion", "follow up success"],
+    "ad_satisfaction_rate": ["ad trust", "advertising satisfaction"],
+    "billable_rate": ["billing rate", "chargeable rate"]
+  },
+  "stage_analysis": {
+    "stage_1_introduction": "Initial greeting and rapport-building phase",
+    "stage_2_eligibility": "Qualification phase determining caller requirements",
+    "stage_3_needs_analysis": "Discovery phase identifying caller needs",
+    "stage_4_plan_detail": "Presentation phase explaining options",
+    "stage_5_enrollment": "Closing phase with commitment"
+  },
+  "intent_levels": {
+    "Level 1": "Poor intent - low-quality leads with minimal conversion potential",
+    "Level 2": "Medium to high intent - moderate-quality leads with good conversion potential",
+    "Level 3": "Best intent - highest-quality leads with maximum conversion potential",
+    "Negative Intent": "Not interested or hostile - no conversion potential",
+    "Not Detected": "Intent unclear or not determined - generally poor quality"
+  },
+  "quality_flags": [
+    "ad_misled",
+    "objection_with_no_rebuttal", 
+    "unprofessionalism",
+    "you_called_me"
+  ]
+} 

@@ -1,0 +1,80 @@
+data_validation_rules:
+  numeric_fields:
+    - revenue
+    - quantity
+    - price
+    - profit
+  
+  date_fields:
+    - date
+    - created_at
+    - timestamp
+  
+  categorical_fields:
+    - region
+    - product
+    - category
+    - customer
+
+data_quality_checks:
+  missing_values:
+    threshold: 0.1  # Maximum 10% missing values allowed
+    critical_fields: ["revenue", "date", "customer"]
+  
+  outliers:
+    method: "iqr"  # IQR method for outlier detection
+    multiplier: 1.5
+    apply_to: ["revenue", "quantity", "price"]
+  
+  data_types:
+    auto_convert: true
+    strict_mode: false
+
+business_metrics:
+  kpis:
+    - name: "Total Revenue"
+      calculation: "sum(revenue)"
+      format: "currency"
+    
+    - name: "Average Order Value"
+      calculation: "mean(revenue)"
+      format: "currency"
+    
+    - name: "Customer Count"
+      calculation: "nunique(customer)"
+      format: "integer"
+    
+    - name: "Revenue Growth"
+      calculation: "pct_change(revenue)"
+      format: "percentage"
+
+suggested_analyses:
+  time_series:
+    - "Revenue trends over time"
+    - "Seasonal patterns in sales"
+    - "Growth rate analysis"
+  
+  comparative:
+    - "Performance by region"
+    - "Product category analysis"
+    - "Customer segmentation"
+  
+  correlation:
+    - "Price vs quantity relationship"
+    - "Revenue vs profit margins"
+    - "Customer behavior patterns"
+
+chart_defaults:
+  colors:
+    primary: "#1f77b4"
+    secondary: "#ff7f0e"
+    success: "#2ca02c"
+    warning: "#d62728"
+  
+  themes:
+    default: "plotly_white"
+    dark: "plotly_dark"
+  
+  sizing:
+    width: 800
+    height: 500 
