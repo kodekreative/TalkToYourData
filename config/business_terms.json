@@ -1,0 +1,48 @@
+{
+  "field_mappings": {
+    "revenue": ["revenue", "sales", "income", "earnings", "turnover"],
+    "customer": ["customer", "client", "account", "buyer"],
+    "date": ["date", "time", "period", "timestamp", "created_at"],
+    "region": ["region", "location", "area", "territory", "zone"],
+    "product": ["product", "item", "sku", "merchandise"],
+    "quantity": ["quantity", "qty", "amount", "count", "volume"],
+    "price": ["price", "cost", "rate", "value", "unit_price"],
+    "profit": ["profit", "margin", "net_income", "earnings"],
+    "category": ["category", "type", "class", "segment"]
+  },
+  "data_types": {
+    "revenue": "numeric",
+    "customer": "text",
+    "date": "datetime",
+    "region": "categorical",
+    "product": "categorical",
+    "quantity": "numeric",
+    "price": "numeric",
+    "profit": "numeric",
+    "category": "categorical"
+  },
+  "business_definitions": {
+    "revenue": "Total income generated from sales before expenses",
+    "customer": "Individual or organization that purchases products/services",
+    "date": "Temporal reference for when events occurred",
+    "region": "Geographic area or territory for business operations",
+    "product": "Goods or services offered by the business",
+    "quantity": "Number of units sold or in inventory",
+    "price": "Amount charged for a product or service",
+    "profit": "Revenue minus costs and expenses",
+    "category": "Classification or grouping of products/services"
+  },
+  "common_aggregations": {
+    "revenue": ["sum", "mean", "median"],
+    "quantity": ["sum", "mean", "count"],
+    "price": ["mean", "min", "max"],
+    "profit": ["sum", "mean"]
+  },
+  "visualization_preferences": {
+    "revenue_by_time": "line",
+    "revenue_by_region": "bar",
+    "quantity_distribution": "histogram",
+    "correlation_analysis": "scatter",
+    "category_breakdown": "pie"
+  }
+} 

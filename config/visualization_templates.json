@@ -1,0 +1,90 @@
+{
+  "chart_templates": {
+    "time_series": {
+      "type": "line",
+      "x_axis": "date",
+      "y_axis": "metric",
+      "title": "{metric} Over Time",
+      "hover_template": "<b>Date:</b> %{x}<br><b>{metric}:</b> %{y}<extra></extra>"
+    },
+    
+    "comparison_bar": {
+      "type": "bar",
+      "x_axis": "category",
+      "y_axis": "metric",
+      "title": "{metric} by {category}",
+      "orientation": "vertical"
+    },
+    
+    "distribution": {
+      "type": "histogram",
+      "x_axis": "metric",
+      "title": "Distribution of {metric}",
+      "bins": 30
+    },
+    
+    "correlation": {
+      "type": "scatter",
+      "x_axis": "metric1",
+      "y_axis": "metric2",
+      "title": "{metric1} vs {metric2}",
+      "trendline": "ols"
+    },
+    
+    "pie_chart": {
+      "type": "pie",
+      "values": "metric",
+      "names": "category",
+      "title": "{metric} Breakdown by {category}"
+    },
+    
+    "heatmap": {
+      "type": "heatmap",
+      "z": "metric",
+      "x": "x_category",
+      "y": "y_category",
+      "title": "{metric} Heatmap"
+    }
+  },
+  
+  "layout_defaults": {
+    "font": {
+      "family": "Arial, sans-serif",
+      "size": 12
+    },
+    "showlegend": true,
+    "margin": {
+      "l": 60,
+      "r": 60,
+      "t": 80,
+      "b": 60
+    },
+    "plot_bgcolor": "white",
+    "paper_bgcolor": "white"
+  },
+  
+  "color_schemes": {
+    "default": ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"],
+    "business": ["#2E8B57", "#4682B4", "#DAA520", "#DC143C", "#8A2BE2"],
+    "professional": ["#2F4F4F", "#708090", "#B0C4DE", "#4169E1", "#6495ED"],
+    "vibrant": ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FECA57"]
+  },
+  
+  "responsive_settings": {
+    "mobile": {
+      "width": 350,
+      "height": 300,
+      "font_size": 10
+    },
+    "tablet": {
+      "width": 600,
+      "height": 400,
+      "font_size": 11
+    },
+    "desktop": {
+      "width": 800,
+      "height": 500,
+      "font_size": 12
+    }
+  }
+} 
