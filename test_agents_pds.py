@@ -33,8 +33,14 @@ import os
 import json
 from dotenv import load_dotenv
 from openai import OpenAI
+from agents import Agent, Runner, RunContextWrapper
+from typing import TypedDict
 
+class QueryContext(TypedDict):
+    query: str
+    df_info: dict
 # Import marketing agents system
+
 try:
     from marketing_agents.orchestrator import AgentOrchestrator
     from marketing_agents.sample_data import generate_sample_marketing_data
@@ -64,29 +70,21 @@ def init_openai():
         return OpenAI(api_key=api_key)
     return None
 
-def get_dataframe_info(df):
-    """Get comprehensive information about the dataframe."""
-    info = {
-        "shape": df.shape,
-        "columns": df.columns.tolist(),
-        "dtypes": df.dtypes.to_dict(),
-        "sample_data": df.head(3).to_dict(),
-        "null_counts": df.isnull().sum().to_dict(),
-        "numeric_columns": df.select_dtypes(include=['number']).columns.tolist(),
-        "categorical_columns": df.select_dtypes(include=['object', 'category']).columns.tolist()
-    }
-    return info
-
-def query_with_gpt4o(query, df, client):
-    """Use GPT-4o to analyze query and generate pandas code."""
-    if not client:
-        return None, "OpenAI client not available"
-    
+def dynamic_instructions(
+    context: RunContextWrapper[QueryContext], 
+    agent: Agent[QueryContext]
+) -> str:
+    """Generate dynamic instructions for the agent based on context"""
     try:
-        df_info = get_dataframe_info(df)
+        # Access the context data
+        if not context.context:
+            raise ValueError("Missing context values")
+
+        ctx = context.context
+        df_info = ctx["df_info"]
+        query = ctx["query"]
         
-        # Create a detailed prompt for GPT-4o
-        prompt = f"""
+        return f"""
 You are a data analyst with business intelligence capabilities. Given a user query and dataframe information, generate Python pandas code to answer the query.
 
 DATAFRAME INFO:
@@ -140,33 +138,101 @@ Return ONLY a JSON object with this EXACT format:
     "visualization_type": "bar"
 }}
 """
+    except Exception as e:
+        tb = traceback.format_exc()
+        print(f"Error generating dynamic instructions: {str(e)}\n{tb}")
+        if 'st' in globals():
+            st.error(f"Error generating dynamic instructions: {str(e)}")
+            st.code(tb)
+        
+        # Return a fallback instruction instead of None
+        return """
+You are a data analyst. Generate Python pandas code to answer user queries.
+Return a JSON object with 'code', 'explanation', and 'visualization_type' keys.
+"""
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1
+def init_dynamic_agent():
+    """Initialize the dynamic agent with proper error handling"""
+    try:
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            return None
+
+        # Create agent with dynamic instructions function
+        agent = Agent[QueryContext](
+            name="Pandas Analyst Agent",
+            instructions=dynamic_instructions,  # Pass the function directly
+            model="gpt-4"
         )
         
-        result_text = response.choices[0].message.content.strip()
+        return agent
         
-        # Remove markdown code blocks if present
-        if "```json" in result_text:
-            result_text = result_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in result_text:
-            result_text = result_text.split("```")[1].split("```")[0].strip()
-        
-        # Try to parse JSON response
-        try:
-            result = json.loads(result_text)
-            # Validate that we have the required fields
-            if not all(key in result for key in ['code', 'explanation', 'visualization_type']):
-                return None, "Invalid response format from GPT-4o"
-            return result, None
-        except json.JSONDecodeError as e:
-            return None, f"Failed to parse GPT-4o JSON response: {str(e)}"
-                
     except Exception as e:
-        return None, f"Error calling GPT-4o: {str(e)}"
+        print(f"Error initializing agent: {str(e)}")
+        return None
+
+def get_dataframe_info(df):
+    """Get comprehensive information about the dataframe."""
+    info = {
+        "shape": df.shape,
+        "columns": df.columns.tolist(),
+        "dtypes": df.dtypes.to_dict(),
+        "sample_data": df.head(3).to_dict(),
+        "null_counts": df.isnull().sum().to_dict(),
+        "numeric_columns": df.select_dtypes(include=['number']).columns.tolist(),
+        "categorical_columns": df.select_dtypes(include=['object', 'category']).columns.tolist()
+    }
+    return info
+
+async def query_with_gpt4o(query: str, df, agent):
+    """Query the agent with dynamic context"""
+    try:
+        if not agent:
+            return None, "Agent not initialized"
+
+        # Get dataframe information
+        df_info = get_dataframe_info(df)
+
+        # Prepare context for dynamic instructions
+        context: QueryContext = {
+            "query": query,
+            "df_info": df_info
+        }
+
+        # Run the agent with the query and context
+        # The dynamic_instructions function will receive this context
+        result = await Runner.run(
+            agent,
+            query,          # The user input/query
+            context=context # This gets passed to dynamic_instructions
+        )
+
+        if not result or not hasattr(result, 'final_output') or not result.final_output:
+            return None, "No response from agent"
+
+        result_text = result.final_output.strip()
+
+        # Parse JSON response
+        if "```json" in result_text:
+            result_text = result_text.split("```json")[1].split("```", 1)[0].strip()
+        elif "```" in result_text:
+            result_text = result_text.split("```", 1)[1].split("```", 1)[0].strip()
+
+        try:
+            parsed = json.loads(result_text)
+            if all(key in parsed for key in ['code', 'explanation', 'visualization_type']):
+                return parsed, None
+            else:
+                return None, "Missing required keys in response"
+        except json.JSONDecodeError as je:
+            return None, f"JSON parsing error: {str(je)}"
+
+    except Exception as e:
+        tb = traceback.format_exc()
+        print(f"Agent query error: {str(e)}\n{tb}")
+        if 'st' in globals():
+            st.error(f"Agent query error: {str(e)}")
+        return None, f"Agent query error: {str(e)}"
 
 def execute_code_safely(code, df):
     """Execute pandas code safely and return result."""
@@ -2074,7 +2140,8 @@ def create_guided_analysis_page(diagnostic):
     
     # Pre-defined analysis options - Multiple analyst types available
     analysis_options = {
-        "intent_analysis": "🎯 Lead Management Analysis - AI-powered analysis with Claude 3.5 Sonnet (Uses Custom Prompt)",
+        # "intent_analysis": "🎯 Lead Management Analysis - AI-powered analysis with Claude 3.5 Sonnet (Uses Custom Prompt)",
+        "intent_analysis": "🎯 Lead Management Analysis - AI-powered analysis with OpenAI GPT-4 (Uses Custom Prompt)",
         "pds_analysis": "📊 PDS Lead Analysis - Detailed pandas-based statistical analysis with performance rankings and ROI calculations",
     }
     
@@ -2294,7 +2361,8 @@ Please provide executive-level strategic recommendations with implementation tim
                         
                         # Claude's AI Insights Section
                         st.markdown("## 🧠 AI-Enhanced Performance Insights")
-                        st.markdown("*Powered by Claude 3.5 Sonnet with statistical benchmarking*")
+                        # st.markdown("*Powered by Claude 3.5 Sonnet with statistical benchmarking*")
+                        st.markdown("*Powered by OpenAI GPT-4 with statistical benchmarking*")
                         
                         insights = claude_analysis.get('insights', [])
                         if insights:
@@ -2400,7 +2468,8 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                         enhanced_analysis_result['extensive_mode'] = True
                         
                         # SKIP WRITER AGENT - Display Claude's results Directly
-                        st.success("✅ Claude 3.5 Sonnet Analysis Complete!")
+                        # st.success("✅ Claude 3.5 Sonnet Analysis Complete!")
+                        st.success("✅ OpenAI GPT-4 Analysis Complete!")
                         
                         # Display Claude's raw analysis directly
                         insights = enhanced_analysis_result.get('insights', [])
@@ -2410,7 +2479,8 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                         confidence = enhanced_analysis_result.get('confidence', {})
                         
                         st.markdown("# 🎯 Lead Quality Analysis Report")
-                        st.markdown("### Powered by Claude 3.5 Sonnet")
+                        # st.markdown("### Powered by Claude 3.5 Sonnet")
+                        st.markdown("### Powered by OpenAI GPT-4")
                         
                         # Executive Summary with first insight
                         if insights:
@@ -2554,10 +2624,12 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                             st.markdown("---")
                             
                             # DEBUG SECTION - Show Raw Claude Results
-                            with st.expander("🔍 DEBUG: Raw Claude 3.5 Sonnet Results", expanded=False):
-                                st.markdown("**Raw Analysis Result from Claude:**")
+                            # with st.expander("🔍 DEBUG: Raw Claude 3.5 Sonnet Results", expanded=False):
+                            #     st.markdown("**Raw Analysis Result from Claude:**")
+                            #     st.json(enhanced_analysis_result)
+                            with st.expander("🔍 DEBUG: Raw OpenAI GPT-4 Results", expanded=False):
+                                st.markdown("**Raw Analysis Result from GPT-4")
                                 st.json(enhanced_analysis_result)
-                            
                             # Download option
                             download_content = f"""# Lead Quality Analysis Report
 Powered by Claude 3.5 Sonnet
@@ -2576,7 +2648,8 @@ Powered by Claude 3.5 Sonnet
 """
                             
                             st.download_button(
-                                "📥 Download Claude Analysis Report",
+                                # "📥 Download Claude Analysis Report",
+                                "📥 Download OpenAI GPT-4 Analysis Report",
                                 download_content,
                                 file_name=f"claude_analysis_{selected_analysis}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                                 mime="text/plain",

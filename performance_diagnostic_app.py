@@ -22,6 +22,14 @@ import os
 import json
 from dotenv import load_dotenv
 from openai import OpenAI
+from agents import Agent, Runner, RunContextWrapper
+import asyncio
+import traceback
+from typing import TypedDict
+
+class QueryContext(TypedDict):
+    query: str
+    df_info: dict
 
 warnings.filterwarnings('ignore')
 
@@ -44,6 +52,81 @@ def init_openai():
         return OpenAI(api_key=api_key)
     return None
 
+def dynamic_instructions(
+    context: RunContextWrapper[QueryContext], 
+    agent: Agent[QueryContext]
+) -> str:
+    """Generate dynamic instructions for the agent based on context"""
+    try:
+        # Access the context data
+        if not context.context:
+            raise ValueError("Missing context values")
+
+        ctx = context.context
+        df_info = ctx["df_info"]
+        query = ctx["query"]
+        
+        return f"""
+You are a data analyst with business intelligence capabilities. Given a user query and dataframe information, generate Python pandas code to answer the query.
+
+DATAFRAME INFO:
+- Shape: {df_info.get('shape', 'N/A')}
+- Columns: {df_info.get('columns', [])}
+- Data types: {df_info.get('dtypes', {})}
+- Sample data: {df_info.get('sample_data', {})}
+- Numeric columns: {df_info.get('numeric_columns', [])}
+- Categorical columns: {df_info.get('categorical_columns', [])}
+
+USER QUERY: "{query}"
+
+Generate Python pandas code that:
+1. Uses ONLY the variable name 'df' for the dataframe
+2. MUST assign final result to variable named 'result'
+3. Do NOT create intermediate variables - write everything in one statement when possible
+4. For column detection, always use this exact pattern: [col for col in df.columns if 'KEYWORD' in col.upper()][0]
+5. For groupby queries, always use reset_index() and assign column names
+6. For calculations, return actual calculated values
+
+Return ONLY a JSON object with this EXACT format:
+{{
+    "code": "pandas code here",
+    "explanation": "brief explanation of what the code does",
+    "visualization_type": "bar"
+}}
+"""
+    except Exception as e:
+        tb = traceback.format_exc()
+        print(f"Error generating dynamic instructions: {str(e)}\n{tb}")
+        if 'st' in globals():
+            st.error(f"Error generating dynamic instructions: {str(e)}")
+            st.code(tb)
+        
+        # Return a fallback instruction instead of None
+        return """
+You are a data analyst. Generate Python pandas code to answer user queries.
+Return a JSON object with 'code', 'explanation', and 'visualization_type' keys.
+"""
+
+def init_dynamic_agent():
+    """Initialize the dynamic agent with proper error handling"""
+    try:
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            return None
+
+        # Create agent with dynamic instructions function
+        agent = Agent[QueryContext](
+            name="Pandas Analyst Agent",
+            instructions=dynamic_instructions,  # Pass the function directly
+            model="gpt-4"
+        )
+        
+        return agent
+        
+    except Exception as e:
+        print(f"Error initializing agent: {str(e)}")
+        return None
+
 def get_dataframe_info(df):
     """Get comprehensive information about the dataframe."""
     info = {
@@ -57,96 +140,55 @@ def get_dataframe_info(df):
     }
     return info
 
-def query_with_gpt4o(query, df, client):
-    """Use GPT-4o to analyze query and generate pandas code."""
-    if not client:
-        return None, "OpenAI client not available"
-    
+async def query_with_gpt4o(query: str, df, agent):
+    """Query the agent with dynamic context"""
     try:
+        if not agent:
+            return None, "Agent not initialized"
+
+        # Get dataframe information
         df_info = get_dataframe_info(df)
-        
-        # Create a detailed prompt for GPT-4o
-        prompt = f"""
-You are a data analyst with business intelligence capabilities. Given a user query and dataframe information, generate Python pandas code to answer the query.
 
-DATAFRAME INFO:
-- Shape: {df_info['shape']} (rows, columns)
-- Columns: {df_info['columns']}
-- Data types: {df_info['dtypes']}
-- Sample data (first 3 rows): {df_info['sample_data']}
-- Numeric columns: {df_info['numeric_columns']}
-- Categorical columns: {df_info['categorical_columns']}
+        # Prepare context for dynamic instructions
+        context: QueryContext = {
+            "query": query,
+            "df_info": df_info
+        }
 
-USER QUERY: "{query}"
-
-Generate Python pandas code that:
-1. Uses ONLY the variable name 'df' for the dataframe
-2. MUST assign final result to variable named 'result'
-3. Do NOT create intermediate variables - write everything in one statement when possible
-4. For column detection, always use this exact pattern: [col for col in df.columns if 'KEYWORD' in col.upper()][0]
-5. For groupby queries, always use reset_index() and assign column names
-6. For calculations, return actual calculated values
-7. Available functions: pd, np, len, sum, max, min, round, str, int, float
-8. CRITICAL: Never use undefined variables like 'ad_misled_col', 'agent_col', 'ser', 'temp'
-9. Always define any column reference inline within the same statement
-
-EXAMPLES:
-
-For "conversion rate by publisher":
-{{
-    "code": "result = df.groupby('PUBLISHER').apply(lambda x: (x['SALE'] == 'Yes').sum() / len(x) * 100).reset_index(); result.columns = ['PUBLISHER', 'Conversion_Rate']; result",
-    "explanation": "Calculate conversion rate by publisher as percentage of total leads",
-    "visualization_type": "bar"
-}}
-
-For "agent availability rates by buyer":
-{{
-    "code": "result = df.groupby('BUYER').apply(lambda x: (x[[col for col in df.columns if 'AGENT' in col.upper()][0]] == 'Yes').sum() / len(x) * 100).reset_index(); result.columns = ['BUYER', 'Agent_Availability_Rate']; result",
-    "explanation": "Calculate agent availability rate by buyer as percentage",
-    "visualization_type": "bar"
-}}
-
-For "ad misled calls by publisher":
-{{
-    "code": "result = df.groupby('PUBLISHER').apply(lambda x: (x[[col for col in df.columns if 'AD_MISLED' in col.upper()][0]] == 'Yes').sum()).reset_index(); result.columns = ['PUBLISHER', 'Ad_Misled_Count']; result['Percentage'] = (result['Ad_Misled_Count'] / df.groupby('PUBLISHER').size().values) * 100; result",
-    "explanation": "Calculate ad misled calls count and percentage by publisher",
-    "visualization_type": "bar"
-}}
-
-Return ONLY a JSON object with this EXACT format:
-{{
-    "code": "pandas code here",
-    "explanation": "brief explanation of what the code does",
-    "visualization_type": "bar"
-}}
-"""
-
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1
+        # Run the agent with the query and context
+        # The dynamic_instructions function will receive this context
+        result = await Runner.run(
+            agent,
+            query,          # The user input/query
+            context=context # This gets passed to dynamic_instructions
         )
-        
-        result_text = response.choices[0].message.content.strip()
-        
-        # Remove markdown code blocks if present
+
+        if not result or not hasattr(result, 'final_output') or not result.final_output:
+            return None, "No response from agent"
+
+        result_text = result.final_output.strip()
+
+        # Parse JSON response
         if "```json" in result_text:
-            result_text = result_text.split("```json")[1].split("```")[0].strip()
+            result_text = result_text.split("```json")[1].split("```", 1)[0].strip()
         elif "```" in result_text:
-            result_text = result_text.split("```")[1].split("```")[0].strip()
-        
-        # Try to parse JSON response
+            result_text = result_text.split("```", 1)[1].split("```", 1)[0].strip()
+
         try:
-            result = json.loads(result_text)
-            # Validate that we have the required fields
-            if not all(key in result for key in ['code', 'explanation', 'visualization_type']):
-                return None, "Invalid response format from GPT-4o"
-            return result, None
-        except json.JSONDecodeError as e:
-            return None, f"Failed to parse GPT-4o JSON response: {str(e)}"
-                
+            parsed = json.loads(result_text)
+            if all(key in parsed for key in ['code', 'explanation', 'visualization_type']):
+                return parsed, None
+            else:
+                return None, "Missing required keys in response"
+        except json.JSONDecodeError as je:
+            return None, f"JSON parsing error: {str(je)}"
+
     except Exception as e:
-        return None, f"Error calling GPT-4o: {str(e)}"
+        tb = traceback.format_exc()
+        print(f"Agent query error: {str(e)}\n{tb}")
+        if 'st' in globals():
+            st.error(f"Agent query error: {str(e)}")
+        return None, f"Agent query error: {str(e)}"
 
 def execute_code_safely(code, df):
     """Execute pandas code safely and return result."""
@@ -389,7 +431,8 @@ def create_talk_to_data_page(diagnostic):
     if query and execute_query:
         with st.spinner("🤖 GPT-4o is analyzing your query..."):
             # Get analysis from GPT-4o
-            gpt_result, error = query_with_gpt4o(query, diagnostic.data, client)
+            agent = init_dynamic_agent()
+            gpt_result, error = asyncio.run(query_with_gpt4o(query, diagnostic.data, agent))
             
             if error:
                 st.error(f"❌ {error}")
@@ -491,7 +534,8 @@ def create_voice_test_page(diagnostic):
     
     # Check for API keys
     openai_client = init_openai()
-    if not openai_client:
+    agent = init_dynamic_agent()
+    if not agent:
         st.error("⚠️ OpenAI API key not found. Please add your API key to the .env file.")
         st.code("OPENAI_API_KEY=your_openai_api_key_here", language="bash")
         return
@@ -570,7 +614,8 @@ def create_voice_test_page(diagnostic):
                     
                     # Process the query with existing diagnostic engine
                     with st.spinner("📊 Analyzing your data..."):
-                        gpt_result, error = query_with_gpt4o(user_query, diagnostic.data, openai_client)
+                        # gpt_result, error = query_with_gpt4o(user_query, diagnostic.data, openai_client)
+                        gpt_result, error = asyncio.run(query_with_gpt4o(user_query, diagnostic.data, agent))
                         
                         if error:
                             st.error(f"❌ Analysis Error: {error}")
@@ -1493,10 +1538,12 @@ def main():
                 
                 # Initialize OpenAI client for analysis
                 client = init_openai()
+                agent = init_dynamic_agent()
                 if client:
                     with st.spinner("🤖 Analyzing your section query..."):
                         # Get analysis from GPT-4o
-                        gpt_result, error = query_with_gpt4o(query, diagnostic.data, client)
+                        # gpt_result, error = query_with_gpt4o(query, diagnostic.data, client)
+                        gpt_result, error = asyncio.run(query_with_gpt4o(query, diagnostic.data, agent))
                         
                         if error:
                             st.error(f"❌ {error}")
@@ -1811,4 +1858,4 @@ def create_speaking_animation():
     return st.markdown(speaking_css, unsafe_allow_html=True)
 
 if __name__ == "__main__":
-    main() 
+    main()
