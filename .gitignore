@@ -52,6 +52,7 @@ jupyter_execute/
 *.csv
 !sample_performance_data.xlsx
 !sample_marketing_data.csv
+!sample_data.xlsx
 
 # API Keys and Secrets
 *_key*

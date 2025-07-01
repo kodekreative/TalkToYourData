@@ -2924,22 +2924,44 @@ def main():
     
     # Sidebar for data upload and navigation
     with st.sidebar:
-        st.header("📁 Data Upload")
+        st.header("📁 Data Source")
         
         # Initialize persistent data storage
         if 'persistent_data' not in st.session_state:
             st.session_state.persistent_data = None
         if 'data_loaded' not in st.session_state:
             st.session_state.data_loaded = False
+            
+        # Auto-load sample data if no data is loaded
+        if not st.session_state.data_loaded:
+            try:
+                sample_file = "sample_data.xlsx"
+                df = pd.read_excel(sample_file)
+                st.session_state.persistent_data = df.copy()
+                st.session_state.data_loaded = True
+                
+                # Load into diagnostic
+                with open(sample_file, 'rb') as file:
+                    if diagnostic.load_data(file):
+                        diagnostic.generate_critical_alerts()
+                        diagnostic.analyze_combinations()
+                        st.success("✅ Sample data loaded automatically!")
+                    else:
+                        st.error("Failed to load sample data into diagnostic system")
+            except Exception as e:
+                st.error(f"Error loading sample data: {str(e)}")
+                st.info("Falling back to manual upload...")
         
+        # Keep file upload as fallback
+        st.markdown("### Upload Custom Data")
         uploaded_file = st.file_uploader(
-            "Upload Excel file",
+            "Upload Excel file (optional)",
             type=['xlsx', 'xls'],
-            help="Upload your performance marketing data"
+            help="Upload your own performance marketing data to replace sample data"
         )
         
         if uploaded_file is not None:
-            if st.button("Load Data"):
+            if st.button("Load Custom Data"):
                 try:
                     # Load into persistent storage
                     df = pd.read_excel(uploaded_file)
@@ -2950,11 +2972,11 @@ def main():
                     if diagnostic.load_data(uploaded_file):
                         diagnostic.generate_critical_alerts()
                         diagnostic.analyze_combinations()
-                        st.success("Data analysis complete!")
+                        st.success("Custom data loaded successfully!")
                     else:
-                        st.error("Failed to load data into diagnostic system")
+                        st.error("Failed to load custom data into diagnostic system")
                 except Exception as e:
-                    st.error(f"Error loading data: {str(e)}")
+                    st.error(f"Error loading custom data: {str(e)}")
         
         # Data status
         if st.session_state.get('data_loaded', False):
