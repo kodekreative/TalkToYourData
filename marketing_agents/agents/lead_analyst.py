@@ -29,7 +29,7 @@ class LeadManagementAnalyst:
         self.openai_client = self.ai_clients.get('openai') if self.ai_clients else None
         
     def _init_openai(self):
-        """Initialize AI clients (OpenAI and Claude)"""
+        """Initialize OpenAI client"""
         clients = {}
         
         # Initialize OpenAI client
@@ -37,21 +37,10 @@ class LeadManagementAnalyst:
             openai_key = os.getenv('OPENAI_API_KEY')
             if openai_key and openai_key != "your_openai_api_key_here":
                 clients['openai'] = OpenAI(api_key=openai_key)
+                print("✅ OpenAI client initialized successfully")
         except Exception as e:
             print(f"Warning: Could not initialize OpenAI client: {e}")
-        
-        # Initialize Claude client
-        try:
-            import anthropic
-            claude_key = os.getenv('ANTHROPIC_API_KEY')
-            if claude_key and claude_key != "your_anthropic_api_key_here":
-                clients['claude'] = anthropic.Anthropic(api_key=claude_key)
-                print("✅ Claude 3.5 Sonnet client initialized successfully")
-        except ImportError:
-            print("Warning: anthropic package not installed. Install with: pip install anthropic")
-        except Exception as e:
-            print(f"Warning: Could not initialize Claude client: {e}")
-        
+    
         return clients
     
     def _load_custom_prompt(self):
@@ -119,7 +108,7 @@ Required JSON structure:
     def analyze_query(self, query: str) -> Dict[str, Any]:
         """
         Analyze a natural language query about marketing performance
-        Enhanced with GPT-4o for intelligent insights
+        Enhanced with OpenAI for intelligent insights
         """
         if self.data is None:
             return {
@@ -140,24 +129,18 @@ Required JSON structure:
             if "error" in base_analysis:
                 return base_analysis
             
-            # Enhanced analysis with AI (Claude 3.5 Sonnet preferred, GPT fallback)
+            # Enhanced analysis with OpenAI
             if (self.ai_clients and extensive_mode):
-                print(f"DEBUG: Using AI for extensive analysis. Query length: {len(query)}")
+                print(f"DEBUG: Using OpenAI for extensive analysis. Query length: {len(query)}")
                 
-                # Try Claude 3.5 Sonnet first (better at following complex prompts)
+                # Try GPT-4 analysis
                 enhanced_analysis = None
-                if 'claude' in self.ai_clients:
-                    print("DEBUG: Trying Claude 3.5 Sonnet...")
-                    enhanced_analysis = self._get_claude_analysis(query, base_analysis, analysis_type)
-                    
-                # Fallback to GPT if Claude fails
-                if not enhanced_analysis and 'openai' in self.ai_clients:
-                    print("DEBUG: Claude failed, trying GPT models...")
+                if 'openai' in self.ai_clients:
+                    print("DEBUG: Using GPT-4 for analysis...")
                     enhanced_analysis = self._get_gpt4o_analysis(query, base_analysis, analysis_type)
                 
                 if enhanced_analysis:
-                    print("DEBUG: AI analysis successful")
-                    # Merge base data with AI insights
+                    print("DEBUG: OpenAI analysis successful")
                     return {
                         **base_analysis,
                         'insights': enhanced_analysis.get('insights', base_analysis.get('insights', [])),
@@ -167,29 +150,6 @@ Required JSON structure:
                         'confidence': enhanced_analysis.get('confidence', 'high'),
                         'extensive_mode': True,
                         'ai_enhanced': True
-                    }
-                else:
-                    print("DEBUG: GPT-4o analysis failed, returning incomplete analysis indicator")
-                    # Return incomplete analysis indicator instead of fictitious data
-                    return {
-                        **base_analysis,
-                        'insights': [
-                            "⚠️ ANALYSIS INCOMPLETE: GPT-4o analysis failed due to technical issues.",
-                            "❌ Unable to provide comprehensive business insights at this time.",
-                            "🔄 Please try again or contact support if the issue persists.",
-                            f"📊 Basic data shows: {len(self.data) if self.data is not None else 0:,} records processed"
-                        ],
-                        'recommendations': [
-                            "Retry the analysis to get complete GPT-4o powered insights.",
-                            "Check system status and ensure proper API connectivity.",
-                            "Use the basic analysis dropdown options for immediate insights."
-                        ],
-                        'business_context': "Analysis could not be completed due to technical limitations. GPT-4o failed to process the request.",
-                        'strategic_implications': "Complete analysis required for strategic decision-making. Please retry.",
-                        'confidence': "incomplete_analysis",
-                        'extensive_mode': True,
-                        'ai_enhanced': False,
-                        'analysis_status': 'failed'
                     }
             else:
                 print(f"DEBUG: Not using GPT-4o. OpenAI client: {self.openai_client is not None}, Extensive mode: {extensive_mode}")
@@ -205,20 +165,18 @@ Required JSON structure:
     
     def _get_claude_analysis(self, query: str, base_analysis: Dict, analysis_type: str) -> Optional[Dict]:
         """
-        Use Claude 3.5 Sonnet to generate intelligent business insights using custom prompts
-        Claude is generally better at following complex business analysis requirements
+        Use OpenAI to generate intelligent business insights (replaces Claude)
         """
         try:
-            claude_client = self.ai_clients.get('claude')
-            if not claude_client:
+            openai_client = self.ai_clients.get('openai')
+            if not openai_client:
                 return None
-                
+            
             # Load custom prompt from markdown file
             prompt_template = self._load_custom_prompt()
-            print(f"DEBUG: Custom prompt loaded for Claude, length: {len(prompt_template)} characters")
-            print(f"DEBUG: Prompt contains JSON requirements: {'RETURN ONLY VALID JSON' in prompt_template}")
+            print(f"DEBUG: Custom prompt loaded, length: {len(prompt_template)} characters")
             
-            # Prepare data summary for Claude with correct intent level context
+            # Prepare data summary with correct intent level context
             data_summary = self._prepare_data_summary(base_analysis)
             
             # Format the prompt with actual values
@@ -227,9 +185,8 @@ Required JSON structure:
                 analysis_type=analysis_type,
                 data_summary=data_summary
             )
-            print(f"DEBUG: Final prompt length for Claude: {len(user_prompt)} characters")
             
-            # Claude system message - more explicit about JSON requirements
+            # System message for OpenAI
             system_message = """You are a Lead Management Analyst AI. You MUST follow the detailed custom prompt requirements exactly.
 
 CRITICAL REQUIREMENTS:
@@ -237,97 +194,29 @@ CRITICAL REQUIREMENTS:
 2. Follow the exact JSON structure specified in the prompt
 3. Include all required sections: performance_analysis, cost_analysis, trending_analysis
 4. Provide detailed business insights with specific metrics and ROI calculations
-5. Start response with { and end with }
+5. Start response with { and end with }"""
 
-Your response must be pure JSON that can be parsed directly."""
-
-            response = claude_client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=4000,
-                temperature=0.1,
-                system=system_message,
+            # Use GPT-4 for complex analysis
+            response = openai_client.chat.completions.create(
+                model="gpt-4",
                 messages=[
+                    {"role": "system", "content": system_message},
                     {"role": "user", "content": user_prompt}
-                ]
+                ],
+                temperature=0.1,
+                max_tokens=4000
             )
             
-            response_content = response.content[0].text
-            print(f"DEBUG: Claude response (first 500 chars): {response_content[:500]}")
+            response_content = response.choices[0].message.content
+            result = self._parse_and_validate_json(response_content)
             
-            # Clean the response - Claude is usually better at following JSON instructions
-            cleaned_content = response_content.strip()
-            
-            # Remove any markdown code blocks if present (though Claude usually doesn't add them)
-            if '```json' in cleaned_content:
-                start = cleaned_content.find('```json') + 7
-                end = cleaned_content.find('```', start)
-                if end != -1:
-                    cleaned_content = cleaned_content[start:end].strip()
-                else:
-                    cleaned_content = cleaned_content[start:].strip()
-            
-            # Find JSON object boundaries
-            first_brace = cleaned_content.find('{')
-            last_brace = cleaned_content.rfind('}')
-            
-            if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
-                json_content = cleaned_content[first_brace:last_brace+1]
-            else:
-                json_content = cleaned_content
-            
-            import json
-            result = json.loads(json_content)
-            print("DEBUG: Successfully parsed Claude JSON response")
-            
-            # Validate Claude's response structure
-            required_sections = ['performance_analysis', 'cost_analysis', 'trending_analysis']
-            missing_sections = [section for section in required_sections if section not in result]
-            
-            insights = result.get('insights', [])
-            recommendations = result.get('recommendations', [])
-            
-            print(f"DEBUG: Claude prompt structure validation:")
-            print(f"  - Required sections present: {len(required_sections) - len(missing_sections)}/{len(required_sections)}")
-            print(f"  - Missing sections: {missing_sections}")
-            print(f"  - Total insights: {len(insights)}")
-            print(f"  - Total recommendations: {len(recommendations)}")
-            
-            if missing_sections:
-                print(f"WARNING: Claude did not return all required sections!")
-                print(f"WARNING: Missing: {missing_sections}")
+            if not result:
                 return None
-            
-            print("=" * 60)
-            print("DEBUG: LEAD ANALYST OUTPUT (Claude 3.5 Sonnet):")
-            print("=" * 60)
-            print(f"INSIGHTS ({len(insights)} total):")
-            for i, insight in enumerate(insights[:5], 1):  # Show first 5
-                if isinstance(insight, dict):
-                    print(f"  {i}. {insight.get('insight', insight)}")
-                else:
-                    print(f"  {i}. {insight}")
-            if len(insights) > 5:
-                print(f"  ... and {len(insights) - 5} more insights")
                 
-            print(f"\nRECOMMENDATIONS ({len(recommendations)} total):")
-            for i, rec in enumerate(recommendations[:3], 1):  # Show first 3
-                if isinstance(rec, dict):
-                    print(f"  {i}. {rec.get('recommendation', rec)}")
-                    print(f"     Expected ROI: {rec.get('expected_ROI', 'Not specified')}")
-                else:
-                    print(f"  {i}. {rec}")
-            if len(recommendations) > 3:
-                print(f"  ... and {len(recommendations) - 3} more recommendations")
-                
-            print(f"\nBUSINESS CONTEXT: {result.get('business_context', 'Provided')[:100]}...")
-            print(f"STRATEGIC IMPLICATIONS: {result.get('strategic_implications', 'Provided')[:100]}...")
-            print(f"CONFIDENCE: {result.get('confidence', 'Not specified')}")
-            print("=" * 60)
-            
             return result
             
         except Exception as e:
-            print(f"Claude analysis failed: {e}")
+            print(f"OpenAI analysis failed: {e}")
             return None
 
     def _get_gpt4o_analysis(self, query: str, base_analysis: Dict, analysis_type: str) -> Optional[Dict]:
@@ -359,7 +248,8 @@ Your response must be pure JSON that can be parsed directly."""
                 {"name": "gpt-4", "max_tokens": 4000, "temperature": 0.1},  # More reliable for complex prompts
                 {"name": "gpt-4-turbo", "max_tokens": 4000, "temperature": 0.1},  # Faster alternative
                 {"name": "gpt-4o", "max_tokens": 4000, "temperature": 0.05},  # Current model
-                {"name": "gpt-3.5-turbo", "max_tokens": 3000, "temperature": 0.2}  # Fallback
+                {"name": "gpt-3.5-turbo", "max_tokens": 3000, "temperature": 0.2},  # Fallback
+                {"name": "gpt-4o-mini", "max_tokens": 3000, "temperature": 0.2}  # Fallback
             ]
             
             response = None
@@ -485,6 +375,43 @@ Your response must be pure JSON that can be parsed directly."""
             print(prompt[:500] + "..." if len(prompt) > 500 else prompt)
             print(f"DEBUG: Data summary:")
             print(data_summary[:300] + "..." if len(data_summary) > 300 else data_summary)
+            return None
+    
+    def _parse_and_validate_json(self, content: str) -> Optional[Dict]:
+        """Parse and validate JSON response from OpenAI"""
+        try:
+            # Clean the response
+            cleaned_content = content.strip()
+            
+            # Remove markdown if present
+            if '```json' in cleaned_content:
+                start = cleaned_content.find('```json') + 7
+                end = cleaned_content.find('```', start)
+                if end != -1:
+                    cleaned_content = cleaned_content[start:end].strip()
+                else:
+                    cleaned_content = cleaned_content[start:].strip()
+            
+            # Extract JSON content
+            first_brace = cleaned_content.find('{')
+            last_brace = cleaned_content.rfind('}')
+            
+            if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                json_content = cleaned_content[first_brace:last_brace+1]
+                result = json.loads(json_content)
+                
+                # Validate required sections
+                required_sections = ['performance_analysis', 'cost_analysis', 'trending_analysis']
+                missing_sections = [section for section in required_sections if section not in result]
+                
+                if missing_sections:
+                    print(f"WARNING: Missing required sections: {missing_sections}")
+                    return None
+                    
+                return result
+            
+        except Exception as e:
+            print(f"Error parsing JSON: {e}")
             return None
     
     def _prepare_data_summary(self, base_analysis: Dict) -> str:
@@ -722,4 +649,4 @@ Your response must be pure JSON that can be parsed directly."""
             'confidence': 'medium',
             'extensive_mode': extensive_mode,
             'ai_enhanced': False
-        } 
+        }
