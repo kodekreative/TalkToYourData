@@ -23,6 +23,7 @@ import json
 from dotenv import load_dotenv
 from openai import OpenAI
 
+# Suppress warnings (moved here to avoid duplication)
 warnings.filterwarnings('ignore')
 
 # Load environment variables
@@ -35,6 +36,240 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Modal Fix CSS and JavaScript
+MODAL_FIX_CSS = """
+<style>
+/* Modal Fix CSS - Comprehensive solution for popup/modal scrolling and positioning issues */
+
+/* Base Modal Overlay */
+.modal-overlay, .stModal > div, [data-testid="modal"] {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 1000 !important;
+    overflow: auto !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+}
+
+/* Modal Container */
+.modal-container, .stModal > div > div, [data-testid="modal"] > div {
+    background: white !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    width: 800px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    position: relative !important;
+    margin: auto !important;
+    overflow: hidden !important;
+}
+
+/* Modal Body - Scrollable */
+.modal-body, .stModal .element-container {
+    padding: 24px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 1 !important;
+    min-height: 0 !important; /* Important for flexbox scrolling */
+}
+
+/* Modal Footer - Always visible */
+.modal-footer {
+    padding: 16px 24px !important;
+    border-top: 1px solid #e5e7eb !important;
+    background: #f9fafb !important;
+    border-radius: 0 0 8px 8px !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 12px !important;
+    flex-shrink: 0 !important;
+    position: sticky !important;
+    bottom: 0 !important;
+}
+
+/* Button Styles */
+.modal-button, .stButton button {
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    border: 1px solid #d1d5db !important;
+    background: white !important;
+    color: #374151 !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+
+.modal-button:hover, .stButton button:hover {
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+}
+
+.modal-button.primary, .stButton button[kind="primary"] {
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: white !important;
+}
+
+.modal-button.primary:hover, .stButton button[kind="primary"]:hover {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .modal-overlay, .stModal > div, [data-testid="modal"] {
+        padding: 10px !important;
+    }
+    
+    .modal-container, .stModal > div > div, [data-testid="modal"] > div {
+        max-width: 95vw !important;
+        max-height: 95vh !important;
+        width: 100% !important;
+    }
+    
+    .modal-body, .stModal .element-container {
+        padding: 16px !important;
+    }
+}
+
+/* Fix for configuration wizard specifically */
+.configuration-wizard {
+    max-height: 85vh !important;
+}
+
+.configuration-wizard .modal-body {
+    max-height: calc(85vh - 140px) !important; /* Account for header and footer */
+}
+
+/* Success message styling */
+.success-message {
+    background: #10b981 !important;
+    color: white !important;
+    padding: 12px 16px !important;
+    border-radius: 6px !important;
+    margin-bottom: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+    overflow: hidden !important;
+}
+
+/* Fix Streamlit specific modal issues */
+.stModal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 1000 !important;
+    overflow: auto !important;
+}
+
+/* Fix form containers */
+form[data-testid="stForm"] {
+    max-height: calc(90vh - 100px) !important;
+    overflow-y: auto !important;
+}
+
+/* Fix expander content */
+.streamlit-expanderContent {
+    max-height: 400px !important;
+    overflow-y: auto !important;
+}
+</style>
+"""
+
+MODAL_FIX_JS = """
+<script>
+// Modal Fix JavaScript - Auto-detects and fixes modal issues
+(function() {
+    // Apply modal fixes
+    function fixModals() {
+        // Find all modal elements
+        const modals = document.querySelectorAll('.stModal, [data-testid="modal"], .modal, [role="dialog"]');
+        
+        modals.forEach(modal => {
+            if (modal.hasAttribute('data-modal-fixed')) return;
+            
+            modal.setAttribute('data-modal-fixed', 'true');
+            
+            // Ensure proper structure
+            const container = modal.querySelector('div');
+            if (container) {
+                container.style.maxHeight = '90vh';
+                container.style.overflow = 'hidden';
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
+            }
+            
+            // Fix scrolling for content
+            const contentElements = modal.querySelectorAll('.element-container, .stForm, form');
+            contentElements.forEach(el => {
+                el.style.overflowY = 'auto';
+                el.style.maxHeight = 'calc(90vh - 100px)';
+            });
+        });
+    }
+    
+    // Apply fixes on load
+    document.addEventListener('DOMContentLoaded', fixModals);
+    
+    // Watch for new modals
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (node.matches && node.matches('.stModal, [data-testid="modal"], .modal, [role="dialog"]')) {
+                        fixModals();
+                    }
+                    const modals = node.querySelectorAll && node.querySelectorAll('.stModal, [data-testid="modal"], .modal, [role="dialog"]');
+                    if (modals && modals.length > 0) {
+                        fixModals();
+                    }
+                }
+            });
+        });
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    
+    // Handle escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modals = document.querySelectorAll('.stModal[style*="block"], [data-testid="modal"]');
+            modals.forEach(modal => {
+                const closeBtn = modal.querySelector('button[aria-label="Close"], .modal-close');
+                if (closeBtn) closeBtn.click();
+            });
+        }
+    });
+    
+    console.log('Modal fix loaded and monitoring for modals...');
+})();
+</script>
+"""
+
+# Apply the modal fix immediately
+st.markdown(MODAL_FIX_CSS, unsafe_allow_html=True)
+st.markdown(MODAL_FIX_JS, unsafe_allow_html=True)
 
 # Talk to Your Data Functions (imported from pandasai_app.py)
 def init_openai():
