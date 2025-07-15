@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Wizard - Fixed Modal</title>
+    <link rel="stylesheet" href="modal_fix.css">
+</head>
+<body>
+    <!-- Modal Overlay -->
+    <div class="modal-overlay show" id="configurationModal">
+        <!-- Modal Container -->
+        <div class="modal-container configuration-wizard">
+            <!-- Close Button -->
+            <button class="modal-close" onclick="closeModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div class="success-message">
+                    <svg class="success-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    Configurations Generated Successfully!
+                </div>
+                <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                    AI has generated complete persona configurations for 1 expert. Review the details below, then proceed to select training videos.
+                </p>
+            </div>
+            
+            <!-- Modal Body - Scrollable Content -->
+            <div class="modal-body">
+                <!-- Persona Profile -->
+                <div class="content-section">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                        <div style="width: 60px; height: 60px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold;">
+                            J
+                        </div>
+                        <div>
+                            <h2 style="margin: 0; font-size: 1.5rem; color: #111827;">Jill Konrath</h2>
+                            <p style="margin: 4px 0 0 0; color: #6b7280;">AI persona based on Jill Konrath, sales expert</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Knowledge Areas -->
+                <div class="content-section">
+                    <h3 class="section-title">📚 Knowledge Areas</h3>
+                    <div class="knowledge-areas">
+                        <div class="knowledge-item">Sales Productivity and Time Management</div>
+                        <div class="knowledge-item">Complex B2B Sales Strategies</div>
+                        <div class="knowledge-item">Sales Prospecting Techniques</div>
+                        <div class="knowledge-item">Buyer-Centric Selling</div>
+                        <div class="knowledge-item">Sales Agility and Adaptability</div>
+                        <div class="knowledge-item">Digital Sales Transformation</div>
+                        <div class="knowledge-item">Sales Leadership Development</div>
+                        <div class="knowledge-item">Customer Research and Insights</div>
+                        <div class="knowledge-item">Value Proposition Development</div>
+                        <div class="knowledge-item">Sales Process Optimization</div>
+                        <div class="knowledge-item">Lead Generation Strategies</div>
+                        <div class="knowledge-item">Sales Messaging and Communication</div>
+                    </div>
+                </div>
+                
+                <!-- Personality Prompt -->
+                <div class="content-section">
+                    <h3 class="section-title">💭 Personality Prompt</h3>
+                    <div class="personality-prompt">I communicate with a direct, practical, and results-oriented style that focuses on helping sales professionals succeed in today's fast-paced business environment. As a veteran sales strategist, I emphasize the importance of being agile, adapting to changes, and focusing on the customer's perspective.
+
+My approach is grounded in real-world experience and proven methodologies. I believe in the power of preparation, the importance of understanding your buyer's challenges, and the need to constantly evolve your sales approach.
+
+Key communication traits:
+- Direct and actionable advice
+- Focus on practical solutions
+- Emphasis on buyer psychology
+- Results-driven methodology
+- Adaptable to changing markets
+- Strong emphasis on value creation</div>
+                </div>
+                
+                <!-- Videos Section -->
+                <div class="content-section">
+                    <h3 class="section-title">🎥 Videos</h3>
+                    <p style="margin-bottom: 16px; color: #6b7280;">10 videos configuration suggested</p>
+                    <div class="videos-section">
+                        <div class="video-item">
+                            <div style="width: 100%; height: 100px; background: #e5e7eb; border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; color: #6b7280;">
+                                <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </div>
+                            <p style="margin: 0; font-size: 12px; color: #374151;">Sales Training Video 1</p>
+                        </div>
+                        <div class="video-item">
+                            <div style="width: 100%; height: 100px; background: #e5e7eb; border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; color: #6b7280;">
+                                <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </div>
+                            <p style="margin: 0; font-size: 12px; color: #374151;">Sales Training Video 2</p>
+                        </div>
+                        <div class="video-item">
+                            <div style="width: 100%; height: 100px; background: #e5e7eb; border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; color: #6b7280;">
+                                <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </div>
+                            <p style="margin: 0; font-size: 12px; color: #374151;">Sales Training Video 3</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Styling Section -->
+                <div class="content-section">
+                    <h3 class="section-title">🎨 Styling</h3>
+                    <div class="styling-section">
+                        <div class="styling-item">
+                            <span style="font-size: 14px; color: #374151;">Icon:</span>
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                            </svg>
+                            <span style="font-size: 14px; color: #6b7280;">fas fa-chart-line</span>
+                        </div>
+                        <div class="styling-item">
+                            <span style="font-size: 14px; color: #374151;">Color:</span>
+                            <div class="color-indicator" style="background: #1e40af;"></div>
+                            <span style="font-size: 14px; color: #6b7280;">blue-700</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer - Always Visible -->
+            <div class="modal-footer">
+                <button class="modal-button" onclick="previousStep()">
+                    Previous
+                </button>
+                <button class="modal-button secondary" onclick="cancelConfiguration()">
+                    Cancel
+                </button>
+                <button class="modal-button primary" onclick="nextStep()">
+                    Next
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal functionality
+        function closeModal() {
+            document.getElementById('configurationModal').classList.remove('show');
+            document.body.classList.remove('modal-open');
+        }
+        
+        function showModal() {
+            document.getElementById('configurationModal').classList.add('show');
+            document.body.classList.add('modal-open');
+        }
+        
+        function previousStep() {
+            // Add previous step logic
+            console.log('Previous step');
+        }
+        
+        function nextStep() {
+            // Add next step logic
+            console.log('Next step');
+        }
+        
+        function cancelConfiguration() {
+            if (confirm('Are you sure you want to cancel the configuration?')) {
+                closeModal();
+            }
+        }
+        
+        // Prevent modal close when clicking inside the modal
+        document.querySelector('.modal-container').addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        // Close modal when clicking outside
+        document.querySelector('.modal-overlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+        
+        // Initialize modal
+        document.addEventListener('DOMContentLoaded', function() {
+            showModal();
+        });
+    </script>
+</body>
+</html> 
