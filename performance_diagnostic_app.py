@@ -385,6 +385,99 @@ def generate_sql_query(user_query):
     except Exception as e:
         raise Exception(f"OpenAI API Error: {str(e)}")
 
+def time_to_minutes(time_str):
+    h, m, s = map(float, time_str.split(':'))
+    return h * 60 + m + s / 60
+
+def build_visualizations(rows):
+    # Convert rows to DataFrame for easier analysis and visualization
+    df = pd.DataFrame(rows)
+    
+    # Create visualizations
+    figures = []
+    
+    # 1. Customer Intent Distribution
+    intent_counts = df['CUSTOMER_INTENT'].value_counts()
+    fig_intent = px.bar(
+        x=intent_counts.index,
+        y=intent_counts.values,
+        title='Customer Intent Distribution',
+        labels={'x': 'Intent Level', 'y': 'Count'},
+        color=intent_counts.index,
+        color_discrete_map={
+            'Level 3': '#2ecc71',  # Green for highest quality
+            'Level 2': '#3498db',  # Blue for good quality
+            'Level 1': '#f1c40f',  # Yellow for moderate
+            'Negative Intent': '#e74c3c',  # Red for negative
+            'Not Detected': '#95a5a6'  # Gray for not detected
+        }
+    )
+    fig_intent.update_layout(showlegend=False)
+    figures.append(fig_intent)
+    
+    # 2. Billable Rate by Publisher
+    billable_rate = df.groupby('PUBLISHER').apply(
+        lambda x: (x['BILLABLE'] == 'Yes').mean() * 100
+    ).reset_index()
+    billable_rate.columns = ['PUBLISHER', 'BILLABLE_RATE']
+    
+    fig_billable = px.bar(
+        billable_rate,
+        x='PUBLISHER',
+        y='BILLABLE_RATE',
+        title='Billable Rate by Publisher',
+        labels={'BILLABLE_RATE': 'Billable Rate (%)'},
+        color='BILLABLE_RATE',
+        color_continuous_scale='RdYlGn'
+    )
+    # Add 70% threshold line
+    fig_billable.add_hline(
+        y=70,
+        line_dash='dash',
+        line_color='red',
+        annotation_text='70% Threshold'
+    )
+    figures.append(fig_billable)
+    
+    # 3. Call Duration Analysis
+    # Convert duration to minutes for better visualization
+    df['DURATION_MINUTES'] = df['DURATION'].apply(time_to_minutes)
+    
+    fig_duration = px.histogram(
+        df,
+        x='DURATION_MINUTES',
+        title='Call Duration Distribution',
+        labels={'DURATION_MINUTES': 'Duration (Minutes)'},
+        color_discrete_sequence=['#3498db']
+    )
+    # Add 5-minute benchmark line
+    fig_duration.add_vline(
+        x=5,
+        line_dash='dash',
+        line_color='green',
+        annotation_text='5-min Benchmark'
+    )
+    figures.append(fig_duration)
+    
+    # 4. Ad Compliance Violations by Publisher
+    ad_misled = df[df['AD_MISLED'] == 'Yes'].groupby('PUBLISHER').size().reset_index()
+    ad_misled.columns = ['PUBLISHER', 'VIOLATIONS']
+    
+    fig_compliance = px.bar(
+        ad_misled,
+        x='PUBLISHER',
+        y='VIOLATIONS',
+        title='Ad Compliance Violations by Publisher',
+        labels={'VIOLATIONS': 'Number of Violations'},
+        color='VIOLATIONS',
+        color_continuous_scale='Reds'
+    )
+    figures.append(fig_compliance)
+    
+    # Display all figures using Streamlit
+    for fig in figures:
+        st.plotly_chart(fig, use_container_width=True)
+
 def summarize_sql_result(rows, user_query: str):
     """
     Use an LLM to summarize the result of the SQL query based on the user's original intent.
@@ -395,6 +488,7 @@ def summarize_sql_result(rows, user_query: str):
     if not rows:
         table_str = "No rows returned."
     else:
+        build_visualizations(rows)
         # Build markdown table from list of dicts
         columns = rows[0].keys()
         header = "| " + " | ".join(columns) + " |"
