@@ -365,7 +365,7 @@ def generate_sql_query(user_query):
     
     try:
         # Initialize OpenAI client
-        client = OpenAI()
+        client = init_openai()
         
         # Make the API call using the new syntax
         response = client.chat.completions.create(
@@ -390,7 +390,7 @@ def summarize_sql_result(rows, user_query: str):
     Use an LLM to summarize the result of the SQL query based on the user’s original intent.
     Accepts a list of dictionaries (rows from SQLite).
     """
-    client = OpenAI()
+    client = init_openai()
 
     if not rows:
         table_str = "No rows returned."
@@ -406,14 +406,34 @@ def summarize_sql_result(rows, user_query: str):
         table_str = "\n".join([header, separator] + data_lines)
 
     prompt = f"""
-You are a data analyst. The user asked: "{user_query}"
+You are an expert data analyst who specializes in extracting key insights from data. 
+The user asked: "{user_query}"
 
-Here is the result of the SQL query:
+Here are the results from the SQL query (showing up to 20 rows):
 
 {table_str}
 
-Please summarize the key insights from this result in a clear, helpful, and concise way.
-Only summarize what the table shows.
+Please provide a concise yet insightful summary with these sections:
+
+1. **Overview**: 
+   - Briefly state what the data shows in 1-2 sentences
+   - Note any important patterns or absences
+
+2. **Key Findings** (3-5 bullet points):
+   - Focus on statistically significant, surprising, or business-relevant insights
+   - Highlight comparisons, trends, or outliers when present
+   - Include specific numbers/percentages where meaningful
+
+3. **Potential Implications** (if applicable):
+   - What actions might these findings suggest?
+   - Any data quality or completeness concerns?
+
+Guidelines:
+- Be factual and only summarize what the data shows
+- Use simple, non-technical language
+- If no rows returned, explain what that means in context
+- For time series, note trends
+- For comparisons, highlight relative differences
 """
 
     response = client.chat.completions.create(
@@ -1700,7 +1720,29 @@ def create_lead_quality_analysis(diagnostic):
                         df_result = run_sql_query(st.session_state.generated_sql)
                         
                         st.success(f"Query executed successfully. Rows returned: {len(df_result)}")
-                        st.dataframe(df_result)
+                        dataframe = pd.DataFrame(df_result)
+                        st.dataframe(dataframe)
+
+                        if len(df_result) >= 2:  # For data with 2+ columns
+                            # Bar chart
+                            st.subheader("📊 Bar Chart")
+                            fig_bar = px.bar(dataframe, x=dataframe.columns[0], y=dataframe.columns[1])
+                            st.plotly_chart(fig_bar, use_container_width=True)
+                            
+                            # Line chart
+                            st.subheader("📈 Line Chart")
+                            fig_line = px.line(dataframe, x=dataframe.columns[0], y=dataframe.columns[1])
+                            st.plotly_chart(fig_line, use_container_width=True)
+                            
+                            # Scatter plot
+                            st.subheader("🔵 Scatter Plot")
+                            fig_scatter = px.scatter(dataframe, x=dataframe.columns[0], y=dataframe.columns[1])
+                            st.plotly_chart(fig_scatter, use_container_width=True)
+                        
+                        elif len(df_result) == 1:  # For single column data
+                            st.subheader("📊 Distribution Plot")
+                            fig_dist = px.histogram(dataframe, x=dataframe.columns[0])
+                            st.plotly_chart(fig_dist, use_container_width=True)
 
                     with st.spinner("Generating summary with AI..."):
                         summary = summarize_sql_result(df_result, st.session_state.user_query)
