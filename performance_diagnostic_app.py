@@ -393,12 +393,60 @@ def build_visualizations(rows):
     # Convert rows to DataFrame for easier analysis and visualization
     df = pd.DataFrame(rows)
     
-    # Create visualizations
-    figures = []
-    
     # Display in 2x2 grid layout
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
+    
+    # Get all column names
+    columns = df.columns.tolist()
+    
+    # Case 1: If we only have exactly 2 columns (including 'PUBLISHER')
+    if len(columns) == 2 and 'PUBLISHER' in columns:
+        numeric_col = [col for col in columns if col != 'PUBLISHER' and pd.api.types.is_numeric_dtype(df[col])]
+        
+        if numeric_col:  # If we have a numeric column (like revenue)
+            try:
+                fig_simple = px.bar(
+                    df,
+                    x='PUBLISHER',
+                    y=numeric_col[0],
+                    title=f'{numeric_col[0].replace("_", " ").title()} by Publisher',
+                    color=numeric_col[0],
+                    color_continuous_scale='Viridis'
+                )
+                with col1:
+                    st.plotly_chart(fig_simple, use_container_width=True)
+            except Exception as e:
+                with col1:
+                    st.error(f"Error creating simple visualization: {str(e)}")
+        else:  # If the second column is non-numeric
+            try:
+                value_counts = df[columns[1]].value_counts().reset_index()
+                value_counts.columns = [columns[1], 'COUNT']
+                
+                fig_simple = px.bar(
+                    value_counts,
+                    x=columns[1],
+                    y='COUNT',
+                    title=f'Distribution of {columns[1].replace("_", " ").title()}',
+                    color=columns[1]
+                )
+                with col1:
+                    st.plotly_chart(fig_simple, use_container_width=True)
+            except Exception as e:
+                with col1:
+                    st.error(f"Error creating simple visualization: {str(e)}")
+        
+        # Hide the other columns since we don't have data for them
+        with col2:
+            st.info("Only two columns available - showing simplified visualization")
+        with col3:
+            st.empty()
+        with col4:
+            st.empty()
+        return
+    
+    # Original visualizations (only run if we have more than 2 columns)
     
     # 1. Customer Intent Distribution by Publisher
     if 'PUBLISHER' in df.columns and 'CUSTOMER_INTENT' in df.columns:
