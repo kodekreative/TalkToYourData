@@ -387,7 +387,7 @@ def generate_sql_query(user_query):
 
 def summarize_sql_result(rows, user_query: str):
     """
-    Use an LLM to summarize the result of the SQL query based on the user’s original intent.
+    Use an LLM to summarize the result of the SQL query based on the user's original intent.
     Accepts a list of dictionaries (rows from SQLite).
     """
     client = init_openai()
@@ -401,39 +401,91 @@ def summarize_sql_result(rows, user_query: str):
         separator = "| " + " | ".join(["---"] * len(columns)) + " |"
         data_lines = [
             "| " + " | ".join(str(row[col]) for col in columns) + " |"
-            for row in rows[:20]
+            for row in rows
         ]
         table_str = "\n".join([header, separator] + data_lines)
 
     prompt = f"""
-You are an expert data analyst who specializes in extracting key insights from data. 
+You are an expert data analyst who specializes in extracting key insights from data, with deep understanding of lead quality metrics and sales execution. 
 The user asked: "{user_query}"
 
-Here are the results from the SQL query (showing up to 20 rows):
+Here are the results from the SQL query:
 
 {table_str}
 
-Please provide a concise yet insightful summary with these sections:
+Please provide a concise yet insightful summary with these sections and user accurate matrices that are available in {table_str}:
 
 1. **Overview**: 
    - Briefly state what the data shows in 1-2 sentences
-   - Note any important patterns or absences
+   - Note important patterns or absences
 
-2. **Key Findings** (3-5 bullet points):
-   - Focus on statistically significant, surprising, or business-relevant insights
-   - Highlight comparisons, trends, or outliers when present
-   - Include specific numbers/percentages where meaningful
+2. **Lead Quality Analysis**:
+   a) **CUSTOMER INTENT** (Primary Quality Metric):
+      - Calculate values of level 1, level2, level 3, Negative Intent, Not Detected in **CUSTOMER INTENT**
+      - Distribution across levels (Level 1/2/3, Negative Intent, Not Detected)
+      - High-Quality Lead Analysis:
+        * Count and percentage of Level 2 & 3 leads
+        * Immediate follow-up status for Level 2 & 3
+        * Level 3 non-conversion rate (indicates sales execution issues)
+      - Poor Quality Analysis:
+        * Count of Level 1, Negative Intent, and Not Detected
+        * Impact on overall lead quality
+   
+   b) **BILLABLE STATUS**:
+      - Overall billable rate (benchmark: >70%)
+      - Publisher-specific rates:
+        * Identify publishers below 70% threshold
+        * Quantify revenue impact of non-billable leads
+      - Correlation with other quality metrics
+   
+   c) **DURATION ANALYSIS**:
+      - Distribution of call durations
+      - Quality indicators:
+        * Percentage of calls >5 minutes (qualified interest benchmark)
+        * Average duration by intent level
+        * Correlation between duration and conversion
+      - Sales execution assessment based on duration patterns
+   
+   d) **AD COMPLIANCE**:
+      - Total count of misleading ads
+      - Publisher breakdown:
+        * List all publishers with misleading ad violations
+        * Violation rates by publisher
+      - Severity assessment and impact
 
-3. **Potential Implications** (if applicable):
-   - What actions might these findings suggest?
-   - Any data quality or completeness concerns?
+3. **Critical Issues** (prioritized):
+   - Zero Tolerance Violations:
+     * All misleading ad instances (immediate action required)
+     * Publishers with systematic compliance issues
+   - High-Priority Follow-ups:
+     * Uncontacted Level 2 & 3 leads
+     * Publishers with billable rates <70%
+   - Sales Execution Gaps:
+     * Level 3 lead non-conversions
+     * Short duration patterns in high-intent calls
+
+4. **Required Actions**:
+   a) Immediate (24-48 hours):
+      - Follow up on all Level 2 & 3 leads
+      - Address misleading ad violations
+      - Contact publishers with low billable rates
+   
+   b) Short-term (1 week):
+      - Review sales execution for Level 3 non-conversions
+      - Implement duration-based quality monitoring
+      - Develop publisher compliance improvement plans
+   
+   c) Systemic Improvements:
+      - Publisher quality scoring updates
+      - Sales team training needs
+      - Process modifications
 
 Guidelines:
-- Be factual and only summarize what the data shows
-- Use simple, non-technical language
-- If no rows returned, explain what that means in context
-- For time series, note trends
-- For comparisons, highlight relative differences
+- Prioritize severity: Misleading ads > Level 3 non-conversions > Low billable rates
+- Be specific with numbers and percentages
+- Highlight concerning trends and patterns
+- Focus on actionable insights
+- Include publisher-specific analyses when relevant
 """
 
     response = client.chat.completions.create(
@@ -1729,15 +1781,6 @@ def create_lead_quality_analysis(diagnostic):
                             fig_bar = px.bar(dataframe, x=dataframe.columns[0], y=dataframe.columns[1])
                             st.plotly_chart(fig_bar, use_container_width=True)
                             
-                            # Line chart
-                            st.subheader("📈 Line Chart")
-                            fig_line = px.line(dataframe, x=dataframe.columns[0], y=dataframe.columns[1])
-                            st.plotly_chart(fig_line, use_container_width=True)
-                            
-                            # Scatter plot
-                            st.subheader("🔵 Scatter Plot")
-                            fig_scatter = px.scatter(dataframe, x=dataframe.columns[0], y=dataframe.columns[1])
-                            st.plotly_chart(fig_scatter, use_container_width=True)
                         
                         elif len(df_result) == 1:  # For single column data
                             st.subheader("📊 Distribution Plot")
