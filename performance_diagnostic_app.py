@@ -396,14 +396,15 @@ def build_visualizations(rows):
     # Create visualizations
     figures = []
     
-    # 1. Customer Intent Distribution
-    intent_counts = df['CUSTOMER_INTENT'].value_counts()
+    # 1. Customer Intent Distribution by Publisher
+    intent_counts = df.groupby(['PUBLISHER', 'CUSTOMER_INTENT']).size().reset_index(name='COUNT')
     fig_intent = px.bar(
-        x=intent_counts.index,
-        y=intent_counts.values,
-        title='Customer Intent Distribution',
-        labels={'x': 'Intent Level', 'y': 'Count'},
-        color=intent_counts.index,
+        intent_counts,
+        x='PUBLISHER',
+        y='COUNT',
+        color='CUSTOMER_INTENT',
+        title='Customer Intent Distribution by Publisher',
+        labels={'COUNT': 'Count'},
         color_discrete_map={
             'Level 3': '#2ecc71',  # Green for highest quality
             'Level 2': '#3498db',  # Blue for good quality
@@ -412,7 +413,7 @@ def build_visualizations(rows):
             'Not Detected': '#95a5a6'  # Gray for not detected
         }
     )
-    fig_intent.update_layout(showlegend=False)
+
     figures.append(fig_intent)
     
     # 2. Billable Rate by Publisher
@@ -439,20 +440,22 @@ def build_visualizations(rows):
     )
     figures.append(fig_billable)
     
-    # 3. Call Duration Analysis
-    # Convert duration to minutes for better visualization
+    # 3. Average Call Duration by Publisher
     df['DURATION_MINUTES'] = df['DURATION'].apply(time_to_minutes)
+    avg_duration = df.groupby('PUBLISHER')['DURATION_MINUTES'].mean().reset_index()
     
-    fig_duration = px.histogram(
-        df,
-        x='DURATION_MINUTES',
-        title='Call Duration Distribution',
+    fig_duration = px.bar(
+        avg_duration,
+        x='PUBLISHER',
+        y='DURATION_MINUTES',
+        title='Average Call Duration by Publisher',
         labels={'DURATION_MINUTES': 'Duration (Minutes)'},
-        color_discrete_sequence=['#3498db']
+        color='DURATION_MINUTES',
+        color_continuous_scale='Blues'
     )
     # Add 5-minute benchmark line
-    fig_duration.add_vline(
-        x=5,
+    fig_duration.add_hline(
+        y=5,
         line_dash='dash',
         line_color='green',
         annotation_text='5-min Benchmark'
@@ -474,9 +477,20 @@ def build_visualizations(rows):
     )
     figures.append(fig_compliance)
     
-    # Display all figures using Streamlit
-    for fig in figures:
-        st.plotly_chart(fig, use_container_width=True)
+    # Display in 2x2 grid layout
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.plotly_chart(figures[0], use_container_width=True)
+    with col2:
+        st.plotly_chart(figures[1], use_container_width=True)
+    
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        st.plotly_chart(figures[2], use_container_width=True)
+    with col4:
+        st.plotly_chart(figures[3], use_container_width=True)
 
 def summarize_sql_result(rows, user_query: str):
     """
@@ -1869,17 +1883,17 @@ def create_lead_quality_analysis(diagnostic):
                         dataframe = pd.DataFrame(df_result)
                         st.dataframe(dataframe)
 
-                        if len(df_result) >= 2:  # For data with 2+ columns
-                            # Bar chart
-                            st.subheader("📊 Bar Chart")
-                            fig_bar = px.bar(dataframe, x=dataframe.columns[0], y=dataframe.columns[1])
-                            st.plotly_chart(fig_bar, use_container_width=True)
+                        # if len(df_result) >= 2:  # For data with 2+ columns
+                        #     # Bar chart
+                        #     st.subheader("📊 Bar Chart")
+                        #     fig_bar = px.bar(dataframe, x=dataframe.columns[0], y=dataframe.columns[1])
+                        #     st.plotly_chart(fig_bar, use_container_width=True)
                             
                         
-                        elif len(df_result) == 1:  # For single column data
-                            st.subheader("📊 Distribution Plot")
-                            fig_dist = px.histogram(dataframe, x=dataframe.columns[0])
-                            st.plotly_chart(fig_dist, use_container_width=True)
+                        # elif len(df_result) == 1:  # For single column data
+                        #     st.subheader("📊 Distribution Plot")
+                        #     fig_dist = px.histogram(dataframe, x=dataframe.columns[0])
+                        #     st.plotly_chart(fig_dist, use_container_width=True)
 
                     with st.spinner("Generating summary with AI..."):
                         summary = summarize_sql_result(df_result, st.session_state.user_query)
