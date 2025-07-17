@@ -396,101 +396,125 @@ def build_visualizations(rows):
     # Create visualizations
     figures = []
     
-    # 1. Customer Intent Distribution by Publisher
-    intent_counts = df.groupby(['PUBLISHER', 'CUSTOMER_INTENT']).size().reset_index(name='COUNT')
-    fig_intent = px.bar(
-        intent_counts,
-        x='PUBLISHER',
-        y='COUNT',
-        color='CUSTOMER_INTENT',
-        title='Customer Intent Distribution by Publisher',
-        labels={'COUNT': 'Count'},
-        color_discrete_map={
-            'Level 3': '#2ecc71',  # Green for highest quality
-            'Level 2': '#3498db',  # Blue for good quality
-            'Level 1': '#f1c40f',  # Yellow for moderate
-            'Negative Intent': '#e74c3c',  # Red for negative
-            'Not Detected': '#95a5a6'  # Gray for not detected
-        }
-    )
-
-    figures.append(fig_intent)
-    
-    # 2. Billable Rate by Publisher
-    billable_rate = df.groupby('PUBLISHER').apply(
-        lambda x: (x['BILLABLE'] == 'Yes').mean() * 100
-    ).reset_index()
-    billable_rate.columns = ['PUBLISHER', 'BILLABLE_RATE']
-    
-    fig_billable = px.bar(
-        billable_rate,
-        x='PUBLISHER',
-        y='BILLABLE_RATE',
-        title='Billable Rate by Publisher',
-        labels={'BILLABLE_RATE': 'Billable Rate (%)'},
-        color='BILLABLE_RATE',
-        color_continuous_scale='RdYlGn'
-    )
-    # Add 70% threshold line
-    fig_billable.add_hline(
-        y=70,
-        line_dash='dash',
-        line_color='red',
-        annotation_text='70% Threshold'
-    )
-    figures.append(fig_billable)
-    
-    # 3. Average Call Duration by Publisher
-    df['DURATION_MINUTES'] = df['DURATION'].apply(time_to_minutes)
-    avg_duration = df.groupby('PUBLISHER')['DURATION_MINUTES'].mean().reset_index()
-    
-    fig_duration = px.bar(
-        avg_duration,
-        x='PUBLISHER',
-        y='DURATION_MINUTES',
-        title='Average Call Duration by Publisher',
-        labels={'DURATION_MINUTES': 'Duration (Minutes)'},
-        color='DURATION_MINUTES',
-        color_continuous_scale='Blues'
-    )
-    # Add 5-minute benchmark line
-    fig_duration.add_hline(
-        y=5,
-        line_dash='dash',
-        line_color='green',
-        annotation_text='5-min Benchmark'
-    )
-    figures.append(fig_duration)
-    
-    # 4. Ad Compliance Violations by Publisher
-    ad_misled = df[df['AD_MISLED'] == 'Yes'].groupby('PUBLISHER').size().reset_index()
-    ad_misled.columns = ['PUBLISHER', 'VIOLATIONS']
-    
-    fig_compliance = px.bar(
-        ad_misled,
-        x='PUBLISHER',
-        y='VIOLATIONS',
-        title='Ad Compliance Violations by Publisher',
-        labels={'VIOLATIONS': 'Number of Violations'},
-        color='VIOLATIONS',
-        color_continuous_scale='Reds'
-    )
-    figures.append(fig_compliance)
-    
     # Display in 2x2 grid layout
     col1, col2 = st.columns(2)
-    
-    with col1:
-        st.plotly_chart(figures[0], use_container_width=True)
-    with col2:
-        st.plotly_chart(figures[1], use_container_width=True)
-    
     col3, col4 = st.columns(2)
     
-    with col3:
-        st.plotly_chart(figures[2], use_container_width=True)
-    with col4:
-        st.plotly_chart(figures[3], use_container_width=True)
+    # 1. Customer Intent Distribution by Publisher
+    if 'PUBLISHER' in df.columns and 'CUSTOMER_INTENT' in df.columns:
+        try:
+            intent_counts = df.groupby(['PUBLISHER', 'CUSTOMER_INTENT']).size().reset_index(name='COUNT')
+            fig_intent = px.bar(
+                intent_counts,
+                x='PUBLISHER',
+                y='COUNT',
+                color='CUSTOMER_INTENT',
+                title='Customer Intent Distribution by Publisher',
+                labels={'COUNT': 'Count'},
+                color_discrete_map={
+                    'Level 3': '#2ecc71',  # Green for highest quality
+                    'Level 2': '#3498db',  # Blue for good quality
+                    'Level 1': '#f1c40f',  # Yellow for moderate
+                    'Negative Intent': '#e74c3c',  # Red for negative
+                    'Not Detected': '#95a5a6'  # Gray for not detected
+                }
+            )
+            with col1:
+                st.plotly_chart(fig_intent, use_container_width=True)
+        except Exception as e:
+            with col1:
+                st.error(f"Error creating Customer Intent visualization: {str(e)}")
+    else:
+        with col1:
+            st.warning("Customer Intent data not available")
+    
+    # 2. Billable Rate by Publisher
+    if 'PUBLISHER' in df.columns and 'BILLABLE' in df.columns:
+        try:
+            billable_rate = df.groupby('PUBLISHER').apply(
+                lambda x: (x['BILLABLE'] == 'Yes').mean() * 100
+            ).reset_index()
+            billable_rate.columns = ['PUBLISHER', 'BILLABLE_RATE']
+            
+            fig_billable = px.bar(
+                billable_rate,
+                x='PUBLISHER',
+                y='BILLABLE_RATE',
+                title='Billable Rate by Publisher',
+                labels={'BILLABLE_RATE': 'Billable Rate (%)'},
+                color='BILLABLE_RATE',
+                color_continuous_scale='RdYlGn'
+            )
+            # Add 70% threshold line
+            fig_billable.add_hline(
+                y=70,
+                line_dash='dash',
+                line_color='red',
+                annotation_text='70% Threshold'
+            )
+            with col2:
+                st.plotly_chart(fig_billable, use_container_width=True)
+        except Exception as e:
+            with col2:
+                st.error(f"Error creating Billable Rate visualization: {str(e)}")
+    else:
+        with col2:
+            st.warning("Billable data not available")
+    
+    # 3. Average Call Duration by Publisher
+    if 'PUBLISHER' in df.columns and 'DURATION' in df.columns:
+        try:
+            df['DURATION_MINUTES'] = df['DURATION'].apply(time_to_minutes)
+            avg_duration = df.groupby('PUBLISHER')['DURATION_MINUTES'].mean().reset_index()
+            
+            fig_duration = px.bar(
+                avg_duration,
+                x='PUBLISHER',
+                y='DURATION_MINUTES',
+                title='Average Call Duration by Publisher',
+                labels={'DURATION_MINUTES': 'Duration (Minutes)'},
+                color='DURATION_MINUTES',
+                color_continuous_scale='Blues'
+            )
+            # Add 5-minute benchmark line
+            fig_duration.add_hline(
+                y=5,
+                line_dash='dash',
+                line_color='green',
+                annotation_text='5-min Benchmark'
+            )
+            with col3:
+                st.plotly_chart(fig_duration, use_container_width=True)
+        except Exception as e:
+            with col3:
+                st.error(f"Error creating Call Duration visualization: {str(e)}")
+    else:
+        with col3:
+            st.warning("Call Duration data not available")
+    
+    # 4. Ad Compliance Violations by Publisher
+    if 'PUBLISHER' in df.columns and 'AD_MISLED' in df.columns:
+        try:
+            ad_misled = df[df['AD_MISLED'] == 'Yes'].groupby('PUBLISHER').size().reset_index()
+            ad_misled.columns = ['PUBLISHER', 'VIOLATIONS']
+            
+            fig_compliance = px.bar(
+                ad_misled,
+                x='PUBLISHER',
+                y='VIOLATIONS',
+                title='Ad Compliance Violations by Publisher',
+                labels={'VIOLATIONS': 'Number of Violations'},
+                color='VIOLATIONS',
+                color_continuous_scale='Reds'
+            )
+            with col4:
+                st.plotly_chart(fig_compliance, use_container_width=True)
+        except Exception as e:
+            with col4:
+                st.error(f"Error creating Compliance Violations visualization: {str(e)}")
+    else:
+        with col4:
+            st.warning("Ad Compliance data not available")
 
 def summarize_sql_result(rows, user_query: str):
     """
