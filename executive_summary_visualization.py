@@ -56,7 +56,37 @@ class ExecutiveSummaryVisualization:
         query = generate_sql_query(billable_analysis_query)
         data = pd.DataFrame(run_sql_query(query))
 
+        # Calculate statistics for summary
+        total_leads = data['LEAD COUNT'].sum()
+        total_billable = data[data['BILLABLE'] == 'Yes']['LEAD COUNT'].sum()
+        overall_billable_rate = (total_billable / total_leads) * 100
+        billable_rates = data.pivot(index='PUBLISHER', columns='BILLABLE', values='PERCENTAGE').fillna(0)
+        billable_rates['healthy'] = billable_rates['Yes'] >= 70
+        problem_publishers = billable_rates[~billable_rates['healthy']].index.tolist()
+
         st.dataframe(data)
+
+        summary = f"""
+            ### Billable Lead Analysis Summary
+            
+            **Overall Statistics:**
+            - 📊 Total leads analyzed: {total_leads:,}
+            - ✅ Billable leads: {total_billable:,} ({overall_billable_rate:.1f}%)
+            - 🚨 Non-billable leads: {total_leads - total_billable:,} ({100 - overall_billable_rate:.1f}%)
+            
+            **Publisher Performance:**
+            - 🎯 Healthy publishers (≥70% billable): {len(billable_rates[billable_rates['healthy']])}
+            - ⚠️ Problem publishers (<70% billable): {len(problem_publishers)}
+            {"    - " + ", ".join(problem_publishers) if problem_publishers else "    - All publishers meet quality standards"}
+            
+            **Key Insights:**
+            - The orange dotted line shows our 70% quality threshold
+            - Publishers highlighted in red need immediate review
+            - Left chart shows percentages - focus on relative performance
+            - Right chart shows volumes - identify high-impact issues
+        """
+
+        st.markdown(summary)
         
         # Calculate overall billable rate per publisher
         billable_rates = data.pivot(index='PUBLISHER', columns='BILLABLE', values='PERCENTAGE').fillna(0)
