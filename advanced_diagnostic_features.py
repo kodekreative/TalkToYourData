@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import seaborn as sns
 from datetime import datetime, timedelta
+from executive_summary_visualization import ExecutiveSummaryVisualization
 
 class AdvancedDiagnostics:
     """Advanced diagnostic capabilities"""
@@ -924,9 +925,13 @@ def create_executive_summary_page(diagnostic):
     display_strategic_recommendations(summary_data)
 
 def generate_executive_summary_report(diagnostic):
-    """Generate comprehensive executive summary data with detailed analytics"""
+    """Generate comprehensive executive summary data with detailed analytics and visualizations"""
     df = diagnostic.data.copy()
     total_calls = len(df)
+    st.write(df)
+    # Draw Visualizations
+    visualization = ExecutiveSummaryVisualization()
+    visualization.display_all_visualizations()
     
     # Ensure numeric columns are properly handled
     if 'DURATION' in df.columns:
