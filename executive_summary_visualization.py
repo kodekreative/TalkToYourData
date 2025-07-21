@@ -315,6 +315,151 @@ class ExecutiveSummaryVisualization:
         
         return fig
 
+    def plot_reached_agent_analysis(self):
+        """
+        Analyze agent reach rates by publisher with performance alerts
+        Returns:
+            - fig: Plotly Figure object
+            - summary: Markdown formatted performance summary
+        """
+        reached_agent_query = """I need to analyze whether leads reached an agent by publisher. Please show me for each publisher:
+            1. The count of leads that reached an agent vs those that didn't
+            2. The percentage of leads that reached an agent
+            3. Grouped by both publisher and REACHED_AGENT status
+            4. With percentages calculated as a portion of each publisher's total leads
+
+            Make sure to:
+            - Only include records where REACHED_AGENT is not null
+            - Name the count column 'LEAD COUNT'
+            - Name the percentage column 'PERCENTAGE'
+            - Round percentages to 1 decimal place
+            - Show results for both 'Yes' and 'No' values of REACHED_AGENT
+        """
+        query = generate_sql_query(reached_agent_query)
+        data = pd.DataFrame(run_sql_query(query))
+        
+        # Calculate statistics for summary
+        total_leads = data['LEAD COUNT'].sum()
+        total_reached = data[data['REACHED_AGENT'] == 'Yes']['LEAD COUNT'].sum()
+        overall_reach_rate = (total_reached / total_leads) * 100
+        reach_rates = data.pivot(index='PUBLISHER', columns='REACHED_AGENT', values='PERCENTAGE').fillna(0)
+        reach_rates['healthy'] = reach_rates['Yes'] >= 90  # Critical threshold
+        problem_publishers = reach_rates[~reach_rates['healthy']].index.tolist()
+        
+        st.dataframe(data)
+
+        summary = f"""
+            ### Agent Reach Rate Analysis Summary
+            
+            **Overall Statistics:**
+            - 📊 Total leads analyzed: {total_leads:,}
+            - ✅ Leads that reached agent: {total_reached:,} ({overall_reach_rate:.1f}%)
+            - 🚨 Missed opportunities: {total_leads - total_reached:,} ({100 - overall_reach_rate:.1f}%)
+            
+            **Publisher Performance:**
+            - 🎯 Meeting target (≥90% reach): {len(reach_rates[reach_rates['healthy']])}
+            - ⚠️ Below target (<90% reach): {len(problem_publishers)}
+            {"    - " + ", ".join(problem_publishers) if problem_publishers else "    - All publishers meet target"}
+            
+            **Business Impact:**
+            - Every missed connection represents potential revenue loss
+            - Publishers highlighted in red require immediate capacity review
+            - Left chart shows reach percentages - focus on relative performance
+            - Right chart shows absolute volumes - identify high-impact issues
+        """
+
+        st.markdown(summary)
+        
+        # Create subplots (1 row, 2 columns)
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=(
+                'Agent Reach Rate by Publisher (%)', 
+                'Lead Volume by Reach Status'
+            ),
+            horizontal_spacing=0.15
+        )
+        
+        # Percentage Plot (Left)
+        for reach_status in ['Yes', 'No']:
+            subset = data[data['REACHED_AGENT'] == reach_status]
+            fig.add_trace(
+                go.Bar(
+                    x=subset['PUBLISHER'],
+                    y=subset['PERCENTAGE'],
+                    name=f'Reached Agent: {reach_status}',
+                    marker_color='#2ca02c' if reach_status == 'Yes' else '#d62728',
+                    showlegend=True
+                ),
+                row=1, col=1
+            )
+        
+        # Count Plot (Right)
+        for reach_status in ['Yes', 'No']:
+            subset = data[data['REACHED_AGENT'] == reach_status]
+            fig.add_trace(
+                go.Bar(
+                    x=subset['PUBLISHER'],
+                    y=subset['LEAD COUNT'],
+                    name=f'Reached Agent: {reach_status}',
+                    marker_color='#2ca02c' if reach_status == 'Yes' else '#d62728',
+                    showlegend=False
+                ),
+                row=1, col=2
+            )
+        
+        # Add critical threshold line (90%)
+        fig.add_hline(
+            y=90,
+            line_dash="dot",
+            annotation_text="CRITICAL THRESHOLD (90%)",
+            line_color="orange",
+            row=1, col=1
+        )
+        
+        # Highlight problematic publishers
+        for i, publisher in enumerate(reach_rates.index):
+            if not reach_rates.loc[publisher, 'healthy']:
+                fig.add_vrect(
+                    x0=i-0.5, x1=i+0.5,
+                    fillcolor="red", opacity=0.1,
+                    line_width=0,
+                    row=1, col=1
+                )
+                fig.add_vrect(
+                    x0=i-0.5, x1=i+0.5,
+                    fillcolor="red", opacity=0.1,
+                    line_width=0,
+                    row=1, col=2
+                )
+        
+        # Update layout
+        fig.update_layout(
+            height=500,
+            legend_title_text='Reached Agent?',
+            xaxis_tickangle=-45,
+            xaxis2_tickangle=-45,
+            hovermode='closest',
+            margin=dict(l=50, r=50, b=150, t=50, pad=4),
+            annotations=[
+                dict(
+                    x=0.5,
+                    y=-0.25,
+                    showarrow=False,
+                    text="",
+                    xref="paper",
+                    yref="paper",
+                    font=dict(size=14, color="red")
+                )
+            ]
+        )
+        
+        # Update axis labels
+        fig.update_yaxes(title_text="Percentage of Leads", row=1, col=1)
+        fig.update_yaxes(title_text="Number of Leads", row=1, col=2)
+        
+        return fig
+    
     def display_all_visualizations(self):
         """Display all visualizations in Streamlit"""
         st.title('Revenue Analysis Dashboard')
@@ -326,5 +471,7 @@ class ExecutiveSummaryVisualization:
         st.plotly_chart(self.plot_billable_analysis(), use_container_width=True)
 
         st.header('Ad Misleading Compliance')
-        # self.plot_ad_misled_analysis()
         st.plotly_chart(self.plot_ad_misled_analysis(), use_container_width=True)
+
+        st.header('Agent Reached Analysis')
+        st.plotly_chart(self.plot_reached_agent_analysis(), use_container_width=True)
