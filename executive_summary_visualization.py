@@ -193,8 +193,127 @@ class ExecutiveSummaryVisualization:
         """
         query = generate_sql_query(ad_mislead_query)
         data = pd.DataFrame(run_sql_query(query))
+        
+        # Calculate statistics for summary
+        total_leads = data['LEAD COUNT'].sum()
+        total_misled = data[data['AD_MISLED'] == 'Yes']['LEAD COUNT'].sum()
+        overall_misled_rate = (total_misled / total_leads) * 100
+        misled_rates = data.pivot(index='PUBLISHER', columns='AD_MISLED', values='PERCENTAGE').fillna(0)
+        problem_publishers = misled_rates[misled_rates['Yes'] > 0].index.tolist()
+        
         st.dataframe(data)
-        return
+
+        summary = f"""
+            ### Misleading Ad Claims Analysis Summary
+            
+            **Overall Statistics:**
+            - 📊 Total leads analyzed: {total_leads:,}
+            - 🚨 Leads with misleading ads: {total_misled:,} ({overall_misled_rate:.1f}%)
+            - ✅ Valid ad claims: {total_leads - total_misled:,} ({100 - overall_misled_rate:.1f}%)
+            
+            **Publisher Performance:**
+            - 🎯 Clean publishers (0% misleading): {len(misled_rates[misled_rates['Yes'] == 0])}
+            - ⚠️ Publishers with violations: {len(problem_publishers)}
+            {"    - " + ", ".join(problem_publishers) if problem_publishers else "    - All publishers have clean records"}
+            
+            **Compliance Insights:**
+            - Any presence of misleading ads requires immediate action
+            - Publishers highlighted in red need urgent review
+            - Left chart shows percentages - focus on relative impact
+            - Right chart shows absolute counts - identify worst offenders
+        """
+
+        st.markdown(summary)
+        
+        # Create subplots (1 row, 2 columns)
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=(
+                'Misleading Ads Percentage by Publisher', 
+                'Misleading Ads Count by Publisher'
+            ),
+            horizontal_spacing=0.15
+        )
+        
+        # Percentage Plot (Left)
+        for misled_status in ['Yes', 'No']:
+            subset = data[data['AD_MISLED'] == misled_status]
+            fig.add_trace(
+                go.Bar(
+                    x=subset['PUBLISHER'],
+                    y=subset['PERCENTAGE'],
+                    name=f'Misleading: {misled_status}',
+                    marker_color='#d62728' if misled_status == 'Yes' else '#2ca02c',
+                    showlegend=True
+                ),
+                row=1, col=1
+            )
+        
+        # Count Plot (Right)
+        for misled_status in ['Yes', 'No']:
+            subset = data[data['AD_MISLED'] == misled_status]
+            fig.add_trace(
+                go.Bar(
+                    x=subset['PUBLISHER'],
+                    y=subset['LEAD COUNT'],
+                    name=f'Misleading: {misled_status}',
+                    marker_color='#d62728' if misled_status == 'Yes' else '#2ca02c',
+                    showlegend=False
+                ),
+                row=1, col=2
+            )
+        
+        # Add zero tolerance line
+        fig.add_hline(
+            y=0,
+            line_dash="dot",
+            annotation_text="ZERO TOLERANCE",
+            line_color="red",
+            row=1, col=1
+        )
+        
+        # Highlight problematic publishers
+        for i, publisher in enumerate(misled_rates.index):
+            if misled_rates.loc[publisher, 'Yes'] > 0:
+                fig.add_vrect(
+                    x0=i-0.5, x1=i+0.5,
+                    fillcolor="red", opacity=0.1,
+                    line_width=0,
+                    row=1, col=1
+                )
+                fig.add_vrect(
+                    x0=i-0.5, x1=i+0.5,
+                    fillcolor="red", opacity=0.1,
+                    line_width=0,
+                    row=1, col=2
+                )
+        
+        # Update layout
+        fig.update_layout(
+            height=500,
+            legend_title_text='Misleading Status',
+            xaxis_tickangle=-45,
+            xaxis2_tickangle=-45,
+            hovermode='closest',
+            margin=dict(l=50, r=50, b=150, t=50, pad=4),
+            annotations=[
+                dict(
+                    x=0.5,
+                    y=-0.25,
+                    showarrow=False,
+                    text="",
+                    xref="paper",
+                    yref="paper",
+                    font=dict(size=14, color="red")
+                )
+            ]
+        )
+        
+        # Update axis labels
+        fig.update_yaxes(title_text="Percentage of Leads", row=1, col=1)
+        fig.update_yaxes(title_text="Number of Leads", row=1, col=2)
+        
+        return fig
 
     def display_all_visualizations(self):
         """Display all visualizations in Streamlit"""
@@ -207,5 +326,5 @@ class ExecutiveSummaryVisualization:
         st.plotly_chart(self.plot_billable_analysis(), use_container_width=True)
 
         st.header('Ad Misleading Compliance')
-        self.plot_ad_misled_analysis()
-        # st.plotly_chart(self.plot_ad_misled_analysis(), use_container_width=True)
+        # self.plot_ad_misled_analysis()
+        st.plotly_chart(self.plot_ad_misled_analysis(), use_container_width=True)
