@@ -46,6 +46,11 @@ class ExecutiveSummaryVisualization:
                 2. The percentage of leads that are billable vs non-billable
                 3. Grouped by publisher and billable status
                 4. With percentages calculated as a portion of each publisher's total leads
+            OUTPUT COLUMN NAMES:
+                -  PUBLISHER
+                -  BILLABLE
+                -  LEAD COUNT
+                -  PERCENTAGE
         """
         query = generate_sql_query(billable_analysis_query)
         data = pd.DataFrame(run_sql_query(query))
@@ -53,16 +58,16 @@ class ExecutiveSummaryVisualization:
         st.dataframe(data)
         
         # Calculate overall billable rate per publisher
-        billable_rates = data.pivot(index='PUBLISHER', columns='BILLABLE', values='percentage').fillna(0)
+        billable_rates = data.pivot(index='PUBLISHER', columns='BILLABLE', values='PERCENTAGE').fillna(0)
         billable_rates['healthy'] = billable_rates['Yes'] >= 70
         
         fig = px.bar(
             data,
             x='PUBLISHER',
-            y='percentage',
+            y='PERCENTAGE',
             color='BILLABLE',
             title='Billable Lead Analysis by Publisher',
-            labels={'percentage': 'Percentage of Leads', 'PUBLISHER': 'Publisher'},
+            labels={'PERCENTAGE': 'Percentage of Leads', 'PUBLISHER': 'Publisher'},
             color_discrete_map={'Yes': '#2ca02c', 'No': '#d62728'},
             barmode='group'
         )
