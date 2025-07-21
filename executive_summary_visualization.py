@@ -178,17 +178,20 @@ class ExecutiveSummaryVisualization:
             - fig: Plotly Figure object
             - summary: Markdown formatted compliance summary
         """
-        # Get data
-        query = """
-        SELECT 
-            PUBLISHER,
-            AD_MISLED,
-            COUNT(*) as lead_count,
-            ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY PUBLISHER), 1) as percentage
-        FROM lead_data
-        WHERE AD_MISLED IS NOT NULL
-        GROUP BY PUBLISHER, AD_MISLED
+        ad_mislead_query = """I need to analyze misleading ad claims by publisher. Please show me for each publisher:
+            1. The count of leads labeled as AD_MISLED (both 'Yes' and 'No')
+            2. The percentage of leads that have misleading ad claims versus those that don't
+            3. Grouped by both publisher and AD_MISLED status
+            4. With percentages calculated as a portion of each publisher's total leads
+
+            Make sure to:
+            - Only include records where AD_MISLED is not null
+            - Name the count column 'LEAD COUNT'
+            - Name the percentage column 'PERCENTAGE'
+            - Round percentages to 1 decimal place
+            - Show results for both 'Yes' and 'No' values of AD_MISLED
         """
+        query = generate_sql_query(ad_mislead_query)
         data = pd.DataFrame(run_sql_query(query))
         st.dataframe(data)
         return
@@ -204,4 +207,5 @@ class ExecutiveSummaryVisualization:
         st.plotly_chart(self.plot_billable_analysis(), use_container_width=True)
 
         st.header('Ad Misleading Compliance')
-        st.plotly_chart(self.plot_ad_misled_analysis(), use_container_width=True)
+        self.plot_ad_misled_analysis()
+        # st.plotly_chart(self.plot_ad_misled_analysis(), use_container_width=True)
