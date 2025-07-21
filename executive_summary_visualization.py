@@ -38,6 +38,7 @@ class ExecutiveSummaryVisualization:
     def plot_billable_analysis(self):
         """
         Analyze billable/non-billable leads by publisher with quality threshold
+        Returns two plots: percentage and count visualizations
         """
         billable_analysis_query = """
             I want to analyze the billable status of leads by publisher. 
@@ -47,10 +48,10 @@ class ExecutiveSummaryVisualization:
                 3. Grouped by publisher and billable status
                 4. With percentages calculated as a portion of each publisher's total leads
             OUTPUT COLUMN NAMES:
-                -  PUBLISHER
-                -  BILLABLE
-                -  LEAD COUNT
-                -  PERCENTAGE
+                - PUBLISHER
+                - BILLABLE
+                - LEAD COUNT
+                - PERCENTAGE
         """
         query = generate_sql_query(billable_analysis_query)
         data = pd.DataFrame(run_sql_query(query))
@@ -61,23 +62,51 @@ class ExecutiveSummaryVisualization:
         billable_rates = data.pivot(index='PUBLISHER', columns='BILLABLE', values='PERCENTAGE').fillna(0)
         billable_rates['healthy'] = billable_rates['Yes'] >= 70
         
-        fig = px.bar(
-            data,
-            x='PUBLISHER',
-            y='PERCENTAGE',
-            color='BILLABLE',
-            title='Billable Lead Analysis by Publisher',
-            labels={'PERCENTAGE': 'Percentage of Leads', 'PUBLISHER': 'Publisher'},
-            color_discrete_map={'Yes': '#2ca02c', 'No': '#d62728'},
-            barmode='group'
+        # Create subplots (1 row, 2 columns)
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=(
+                'Billable Percentage by Publisher', 
+                'Lead Count by Billable Status'
+            ),
+            horizontal_spacing=0.15
         )
         
-        # Add 70% threshold line
+        # Percentage Plot (Left)
+        for billable_status in ['Yes', 'No']:
+            subset = data[data['BILLABLE'] == billable_status]
+            fig.add_trace(
+                go.Bar(
+                    x=subset['PUBLISHER'],
+                    y=subset['PERCENTAGE'],
+                    name=f'Billable: {billable_status}',
+                    marker_color='#2ca02c' if billable_status == 'Yes' else '#d62728',
+                    showlegend=True
+                ),
+                row=1, col=1
+            )
+        
+        # Count Plot (Right)
+        for billable_status in ['Yes', 'No']:
+            subset = data[data['BILLABLE'] == billable_status]
+            fig.add_trace(
+                go.Bar(
+                    x=subset['PUBLISHER'],
+                    y=subset['LEAD COUNT'],
+                    name=f'Billable: {billable_status}',
+                    marker_color='#2ca02c' if billable_status == 'Yes' else '#d62728',
+                    showlegend=False  # Only show legend once
+                ),
+                row=1, col=2
+            )
+        
+        # Add threshold line to PERCENTAGE plot
         fig.add_hline(
-            y=70, 
+            y=70,
             line_dash="dot",
-            annotation_text="Healthy Threshold (70%)",
-            line_color="orange"
+            annotation_text="70% Threshold",
+            line_color="orange",
+            row=1, col=1
         )
         
         # Highlight problematic publishers
@@ -86,14 +115,30 @@ class ExecutiveSummaryVisualization:
                 fig.add_vrect(
                     x0=i-0.5, x1=i+0.5,
                     fillcolor="red", opacity=0.1,
-                    line_width=0
+                    line_width=0,
+                    row=1, col=1
+                )
+                fig.add_vrect(
+                    x0=i-0.5, x1=i+0.5,
+                    fillcolor="red", opacity=0.1,
+                    line_width=0,
+                    row=1, col=2
                 )
         
+        # Update layout
         fig.update_layout(
-            xaxis_tickangle=-45,
             height=500,
-            legend_title_text='Billable Status'
+            legend_title_text='Billable Status',
+            xaxis_tickangle=-45,
+            xaxis2_tickangle=-45,
+            hovermode='closest',
+            margin=dict(l=50, r=50, b=100, t=50, pad=4)
         )
+        
+        # Update axis labels
+        fig.update_yaxes(title_text="Percentage of Leads", row=1, col=1)
+        fig.update_yaxes(title_text="Number of Leads", row=1, col=2)
+        
         return fig
     
     def display_all_visualizations(self):
