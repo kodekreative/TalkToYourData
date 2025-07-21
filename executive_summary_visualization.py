@@ -171,6 +171,28 @@ class ExecutiveSummaryVisualization:
         
         return fig
     
+    def plot_ad_misled_analysis(self):
+        """
+        Analyze misleading ad claims by publisher with compliance alerts
+        Returns:
+            - fig: Plotly Figure object
+            - summary: Markdown formatted compliance summary
+        """
+        # Get data
+        query = """
+        SELECT 
+            PUBLISHER,
+            AD_MISLED,
+            COUNT(*) as lead_count,
+            ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY PUBLISHER), 1) as percentage
+        FROM lead_data
+        WHERE AD_MISLED IS NOT NULL
+        GROUP BY PUBLISHER, AD_MISLED
+        """
+        data = pd.DataFrame(run_sql_query(query))
+        st.dataframe(data)
+        return
+
     def display_all_visualizations(self):
         """Display all visualizations in Streamlit"""
         st.title('Revenue Analysis Dashboard')
@@ -180,3 +202,6 @@ class ExecutiveSummaryVisualization:
 
         st.header('Billable Lead Analysis by Publisher')
         st.plotly_chart(self.plot_billable_analysis(), use_container_width=True)
+
+        st.header('Ad Misleading Compliance')
+        st.plotly_chart(self.plot_ad_misled_analysis(), use_container_width=True)
