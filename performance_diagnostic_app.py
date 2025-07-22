@@ -27,6 +27,7 @@ import asyncio
 import traceback
 from typing import TypedDict
 from sql_query_generation import generate_sql_query, run_sql_query
+from db_create import create_database_and_insert_csv
 
 class QueryContext(TypedDict):
     query: str
@@ -2048,6 +2049,17 @@ def main():
         
         if uploaded_file is not None:
             if st.button("Load Data"):
+                with st.spinner("Processing data..."):
+                    if create_database_and_insert_csv(uploaded_file):
+                        st.success("Database created successfully!")
+                        # Show sample data
+                        st.subheader("Loaded Data")
+                        conn = sqlite3.connect("lead_data.db")
+                        sample_data = pd.read_sql_query("SELECT * FROM lead_data LIMIT 5", conn)
+                        conn.close()
+                        st.dataframe(sample_data)
+                    else:
+                        st.error("Failed to process the file")
                 if diagnostic.load_data(uploaded_file):
                     diagnostic.generate_critical_alerts()
                     diagnostic.analyze_combinations()
