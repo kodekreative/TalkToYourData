@@ -2052,12 +2052,6 @@ def main():
                 with st.spinner("Processing data..."):
                     if create_database_and_insert_csv(uploaded_file):
                         st.success("Database created successfully!")
-                        # Show sample data
-                        st.subheader("Loaded Data")
-                        conn = sqlite3.connect("lead_data.db")
-                        sample_data = pd.read_sql_query("SELECT * FROM lead_data LIMIT 5", conn)
-                        conn.close()
-                        st.dataframe(sample_data)
                     else:
                         st.error("Failed to process the file")
                 if diagnostic.load_data(uploaded_file):
